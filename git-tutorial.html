@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>CS533 Concepts of Operating Systems, Spring 2017</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>CS533 Concepts of Operating Systems</h1>
+        <p>Portland State University, Spring 2017</p>
+
+        <p class="view"><a href="https://github.com/madhu-ganesh/CS533-Operating-Systems">View the Project on GitHub <small>madhu-ganesh/CS533-Operating-Systems</small></a></p>
+      </header>
+      <section>
+        <h1>Git and Github Tutorial</h1>
+        <p><strong>Note:</strong> Using Git and GitHub is completely optional. Your grade <strong>will not</strong> suffer in any way if you decide not to use it. If you choose not to use Git and/or GitHub for the CS533 project feel free to get all the files by clicking on the download zip or tarball instructions on the left. You should be able to click on one of those links to download the files to your computer and then you can upload the files you need to the ada server in the normal way. If you need help with that, come to office hours or make an appointment and we'll tackle it one-on-one.</p>
+        <p>Git is a version control system. It allows you to save a complete history of any files and a complete history of all changes you've made to those files. Handy! We won't be using a ton of the features of Git, but there is one feature that you might find useful.</p>
+        <p>First things first, you need to have git installed on your machine. If you log into your ada account, you can type <code>git --version</code> and you should see something like <code>git version 2.9.3</code> as a result. Great news! Git, the software package, is already installed on ada. If you're trying to install Git on your personal computer, visit <a href="https://help.github.com/articles/set-up-git/">GitHub's help pages</a></p>
+        <p>Once git is installed on your preferred machine, there is only one step required to get all the files in the repository (which is git-speak for the code in the project under consideration). If, for instance, you're logged into ada, simply go to your home dir <code>cd</code> and then type <code>git clone https://github.com/mikelane/CS533-Operating-Systems.git</code>. This will put all the files into a new directory called CS533-Operating-Systems. Type <code>git clone --help</code> for other options and more information.</p>
+        <p>The next thing you'll want to do is to create a branch where you can do your work. How your branches are set up is up to you. Maybe you want to have a single branch where you will put all of your work for all of your assignments. Maybe you'll want a branch for each assignment. In either case, first make sure you are on the master branch and that you have the latest version of the code. Go to the CS533-Operating-Systems folder (or whatever you've named that) and type <code>git checkout master</code> and then <code>git pull</code>. This will put you on the master branch and will pull in any changes that I've made to the master branch since you last checked. Then to create a new branch type <code>git checkout -b my-work</code>. Feel free to change "my-work" to any name you'd like. <strong>NOTE:</strong> Please do not create a new remote branch or make any pull requests since this will make all of your work visible to everyone.</p>
+        <p>In order to make things a bit easier, I'll have you submit your work via email as per the directions on the assignment pages. So you won't have to concern yourself with other features of git for CS533. I'm happy to help with some git-related questions if I have some extra time, though.</p>
+      </section>
+      <footer>
+        <p><strong>CS533 TA: <a href="mailto:mganesh@pdx.edu">Madhumeta Ganesh</a></strong></br>
+        I will try to answer emails within 24 hours.</br>
+        <strong>Office Hours:</strong> Tuesdays and Thursdays at 10:30AM to 11:30AM, and by appointment</br>
+        <strong>Please make sure you've signed up for the <a href="https://mailhost.cecs.pdx.edu/mailman/listinfo/cs533">class mailing list</a></strong>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+
+  </body>
+</html>

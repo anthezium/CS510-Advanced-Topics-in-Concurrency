@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>CS510 Advanced Topics in Concurrency, Winter 2018</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>CS510 Advanced Topics in Concurrency</h1>
+        <p>Portland State University, Winter 2018</p>
+
+        <p class="view"><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency">View the Project on GitHub <small>anthezium/CS510-Advanced-Topics-in-Concurrency</small></a></p>
+      </header>
+      <section>
+        <h1>
+<a id="cs510-course-project" class="anchor" href="#cs510-course-project" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CS510 Course Project</h1>
+
+<p>Throughout the term, you will be developing true concurrent code, ranging from synchronization primitives to data structures.</p>
+
+<p>Because many of the mechanisms we will be using are platform-dependent, it is important that everyone is using the same environment. To that end, we ask that students work remotely on the CS department's general-purpose Linux platform, <code>ada.cs.pdx.edu</code>. Ada is a 30-core x86-64 virtual server running Ubuntu Linux with a variety of useful software pre-installed.  It is hosted on a 20-core physical server with Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz CPUs with hyperthreading enabled, providing a total of 40 hyperthreaded cores.  Gnat also hosts tanto, babbage, and wakizashi, so we need to be mindful citizens of a shared computing environment and always leave some cores unused for the OS and other users.</p>
+
+<p>To connect to Ada, you will need an SSH client (I suggest using the terminal or <a href="https://iterm2.com">iTerm2</a> for macOS, <a href="https://mosh.mit.edu/">mosh</a> for Linux/Cygwin and <a href="http://www.chiark.greenend.org.uk/%7Esgtatham/putty/">PuTTY</a> for Windows), and an MCECS resource account, which is separate from your ODIN account and is maintained by <a href="http://cat.pdx.edu/">the CAT</a>. If you do not have an MCECS account, please visit the <a href="http://cat.pdx.edu/tutors.html">CS Tutors</a> in FAB 88.</p>
+
+<p>All code will be written in the C programming language, possibly with a small portion in GNU Assembler. We assume you have some knowledge of C; if you need to brush up, we recommend <a href="http://en.wikipedia.org/wiki/The_C_Programming_Language">The C Programming Language</a> by Kernighan and Ritchie. A copy of this book is available from the CS Tutors for checkout while you are in the CS lounge (FAB 88). Knowledge of GNU Assembler syntax is helpful, but not required; some tips on the assembly required are provided <a href="http://web.cecs.pdx.edu/%7Ewalpole/class/cs533/fall2016/project/project/assign1/asm_hints.md">here</a>.</p>
+
+<p>This project also assumes some knowledge of working on the Unix/Linux command-line, especially the use of the GNU Compiler Collection (gcc), GNU Make (make), and the GNU Project Debugger (gdb). If you need a refresher, consider attending the workshops offered by the CS Tutors near the beginning of the term, and/or browsing their <a href="http://cat.pdx.edu/tutors/tutorials.html">tutorials page</a>. If you need additional assistance, contact <a href="mailto:theod@pdx.edu">the TA (Ted)</a> or the <a href="https://mailhost.cecs.pdx.edu/mailman/listinfo/cs510walpole">course mailing list</a>.</p>
+
+<h2>
+<a id="assignments" class="anchor" href="#assignments" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Assignments</h2>
+
+<p>The project is divided into eleven mandatory assignments and one optional assignment, roughly increasing in complexity. Assignments are due a week after relevant subject matter is introduced in class. To complete each project, it is highly recommended that you start on them as early as possible!</p>
+
+<ul>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_1">Basic Spinlocks</a>: <strong>Starts January 9, due January 16</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_2">Queueing Spinlocks and Ticket Spinlocks</a>: <strong>Starts January 16, due January 23</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_3">Concurrent Linked Lists</a>: <strong>Starts January 18, due January 25</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_4">Basic Reader-Writer Locks</a>: <strong>Starts January 23, due January 30</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_5">Wait Freedom</a>: <strong>Starts January 25, due February 1</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_6">Memory Ordering Correctness</a>: <strong>Starts January 30, due February 6</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_7">Memory Ordering Performance</a>: <strong>Starts February 1, due February 13 (midterm is Feburary 8)</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_8">Scalable Reader-Writer Locks</a>: <strong>Starts February 13, due February 20</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_9">Basic RCU Linked List</a>: <strong>Starts February 15, due February 22</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_10">Non-Linearizable RCU Linked List</a>: <strong>Starts February 22, due February 29</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_11">RCU Linked List Data Freshness</a>: <strong>Starts March 1, due March 8</strong>
+</li>
+<li><a href="https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/tree/master/Assignment_12">(Optional) New Relativistic Data Structure</a>: <strong>Starts March 6, due March 13</strong>
+</li>
+</ul>
+
+<h2>
+<a id="grading" class="anchor" href="#grading" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Grading</h2>
+
+<p>The main goal of this project is to give you hands-on experience with the implementation and performance characteristics of some of the ideas and mechanisms we will be encountering throughout the course.</p>
+
+<p>With that in mind, we will use the project primarily as an educational tool, rather than an assessment tool. Your project assignments will not be graded, hence they will not contribute directly to your overall grade. However, the midterm and final exams will contain questions that relate to the project assignments, in addition to those that test understanding of the concepts covered in the lectures and course reading material. Hence, it is important that you complete the project assignments and learn from them. They should not be considered optional!</p>
+      </section>
+      <footer>
+        <p><strong>NEW!</strong> For an intro to git, go <a href="https://anthezium.github.io/C510-Advanced-Topics-in-Concurrency/git-tutorial.html">here</a></br></p>
+        <p><strong>CS510 TA: <a href="mailto:theod@pdx.edu">Ted Cooper</a></strong></br>
+        I will try to answer emails within 24 hours.</br>
+        <strong>Office Hours:</strong> TBD, and by appointment</br>
+        <strong>Please make sure you've signed up for the <a href="https://mailhost.cecs.pdx.edu/mailman/listinfo/cs510walpole">class mailing list</a></strong>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+
+  </body>
+</html>
