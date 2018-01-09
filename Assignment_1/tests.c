@@ -127,19 +127,19 @@ void tests_multi() {
               // see if per-thread counters sum to shared lock-protected counter
               sum = 0;
               for(i=0; i<nt; ++i) { sum += datas[i].my_spinlock_counter; }
-              if (sum != my_spinlock_shared_counter || (all_ops && sum != n_ops)) {
+              if (sum == 0 || sum != my_spinlock_shared_counter || (all_ops && sum != n_ops)) {
                 if (test == SPIN_TRY_LOCK_CORRECTNESS_TEST) {
                   printf_error("-1: %s failed for nt %d, my_spinlock_shared_counter: %" PRIu64 
                                ", sum: %" PRIu64 ", n_ops: %" PRIu64
                                ".  If the lock were working correctly, counter and sum would "
-                               "be the same.\n"
+                               "be nonzero and the same.\n"
                                , test_names[test], nt, my_spinlock_shared_counter, sum, n_ops);
                 }
                 else {
                   printf_error("-1: %s failed for nt %d, my_spinlock_shared_counter: %" PRIu64 
                                ", sum: %" PRIu64 ", n_ops: %" PRIu64
                                ".  If the lock were working correctly, they would all "
-                               "be the same.\n"
+                               "be nonzero and the same.\n"
                                , test_names[test], nt, my_spinlock_shared_counter, sum, n_ops);
                 }
                 exit(-1);
@@ -147,7 +147,7 @@ void tests_multi() {
               else {
                 printf_parent("-1: %s succeeded for nt %d, my_spinlock_shared_counter: %" PRIu64 
                               ", sum: %" PRIu64 ", n_ops: %" PRIu64
-                              ".  Values are the same, so the lock is working correctly.\n"
+                              ".  Values are nonzero and the same, so the lock is working correctly.\n"
                              , test_names[test], nt, my_spinlock_shared_counter, sum, n_ops);
               }
               // reset counters for next test
