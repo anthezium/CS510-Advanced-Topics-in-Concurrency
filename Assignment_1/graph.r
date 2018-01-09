@@ -23,7 +23,9 @@ gen_graph <- function(data, xc, yc, f, name, n_breaks, lbs){
     scale_y_continuous(breaks = pretty_breaks(n_breaks)) +
     lbs
     
-  ggsave(paste0(name,".pdf"), width=16, height=9, units="in", limitsize=FALSE)
+  path <- paste0(name,".pdf")
+  print(paste0("generating ", path))
+  ggsave(path, width=16, height=9, units="in", limitsize=FALSE)
 }
 
 #gen_graph(subset(tpt_by_test_and_nt, critical_section_accesses == 0), "nt", "ticks_per_thread", is_graphable, paste0(name, "_tpt"), n_breaks,
