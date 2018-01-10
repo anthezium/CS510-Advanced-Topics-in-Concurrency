@@ -178,7 +178,7 @@ same way.  Feel free to experiment with adjusting the values of `MAX_THREADS`,
 ### `spin_lock()`
 
 Once you've convinced yourself that `spin_try_lock()` and `spin_unlock()` are
-correct by running some experiments, you'll have seen some messages like:
+correct by running some experiments, you'll have seen some messages like
 
 ```
 -1: spin_try_lock_correctness_nograph succeeded for nt 24,
@@ -287,9 +287,9 @@ situations that trigger bus traffic).
    Does passing the lock around and busy-waiting for it affect the time it
    takes for all threads to crunch through the set of operations?  If so, is the
    effect different for different numbers of threads?
-3. As we add bus traffic by updating a single cache line and updating 10 cache
-   lines while holding the lock, how do `spin_lock` and `pthread_spin_lock` respond
-   to this change, and why?
+3. As we add bus traffic, first by updating a single cache line and then by
+   updating 10 cache lines while holding the lock, how do `spin_lock` and
+   `pthread_spin_lock` respond to this change, and why?
 
 #### A note on resource sharing, measurement accuracy, and interference
 
@@ -325,7 +325,7 @@ virtualization and hyperthreading on the host, and benchmark results often
 fluctuate.  Try running a given benchmark multiple times and looking at the
 graphs that are produced to get an idea of the range of results, and if you
 produce a particular graph with results that just don't make sense, try running
-`./bench` again before you get too confused :)
+`./bench` again before you get too invested in being confused :)
 
 ### `spin_wait_lock()`
 
