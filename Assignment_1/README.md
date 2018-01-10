@@ -26,6 +26,12 @@ Finally, this assignment is brand new, so there may be gaps in the
 documentation and bugs in the code.  Let us know about any issues you find and
 we'll resolve them as quickly as possible.
 
+If you have questions and are comfortable sharing them, send them to the
+[mailing list](mailto:cs510walpole@cecs.pdx.edu).  If you would like Ted to
+privately answer questions or take a look at your code, you can get in touch
+with him via [email](mailto:theod@pdx.edu).  He will also make an effort to
+lurk on IRC in `#cs510walpole` on irc.cat.pdx.edu (see below for details).
+
 ### What is a spinlock?
 
 We can use a lock to make sure that one thread has mutually exclusive access to a
@@ -346,7 +352,7 @@ delay while polling with `spin_try_lock()`, let's poll by *loading* `*lock` in
 a tight loop, and then attempting `spin_try_lock()` only after we observe
 `*lock == UNLOCKED`.  Implement this approach in `void spin_read_lock(volatile
 uint64_t *lock)` in `worker.c`.  We'd like to compare the effect of delaying
-and with the effect of polling with loads instead of `lockcmpxchgq()`, so don't
+with the effect of polling with loads instead of `lockcmpxchgq()`, so don't
 include the delay loop from `spin_wait_lock()` in this implementation.
 
 Once you've implemented `spin_read_lock()`, enable
@@ -364,4 +370,14 @@ previous graphs.
 10. Do the results suggest that one way of minimizing communication is better
     than the other?
 
-### (Optional) `spin
+### (Optional) `spin_experimental_lock()`
+
+Finally, we offer a chance for intrepid souls to explore combining the
+techniques we've tried above, and anything else you can imagine or read about
+in the realm of spinlock implementation.  How close can you get to `pthread_spin_lock`?
+How is `pthread_spin_lock` [implemented](https://sourceware.org/git/?p=glibc.git;a=blob;f=nptl/pthread_spin_lock.c;h=58c794b5da9aaeac9f0082ea6fdd6d10cabc2622;hb=HEAD) anyway? 
+Play and trial and error are the substance of experiential learning, so go crazy.
+
+In keeping with previous steps, implement `spin_experimental_lock()` in `worker.c`,
+and turn on `spin_experimental_lock_correctness_nograph` and `spin_experimental_lock` in
+`test_on` in `tests.c`, then `make`, `run`, `bench` and repeat as usual.
