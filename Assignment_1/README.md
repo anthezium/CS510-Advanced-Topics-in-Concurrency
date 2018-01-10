@@ -42,7 +42,7 @@ and releases the lock.
 We can use a word `lock` in shared memory to represent a lock, which has the
 value `UNLOCKED` when it is free, and the value `LOCKED` when it is held by
 some thread.  Then, acquiring the lock is as simple as observing `lock ==
-UNLOCKED`, and then writing `LOCKED` to `lock`, right?  Let's say that threads
+UNLOCKED`, and then writing `LOCKED` to `lock`, right?  WRONG!  Let's say that threads
 A and B both observe `lock == UNLOCKED`, and then concurrently write `LOCKED`
 to `lock`.  Both would observe that `lock == LOCKED`, and each might conclude
 that it could safely access the resource `lock` protects.  This is just what a
@@ -51,7 +51,7 @@ lock is supposed to prevent, right?
 We could try identifying the lock holder in `lock`, with thread A writing
 `LOCKED_A` and thread B writing `LOCKED_B`.  Then if thread A observed `lock ==
 LOCKED_A`, it would know that B hadn't come along and written `LOCKED_B` to
-`lock`, right?  What if B just hadn't gotten around to it yet?  A observes
+`lock`, right?  WRONG!  What if B just hadn't gotten around to it yet?  A observes
 `lock == LOCKED_A`, then B writes `LOCKED_B` to `lock` and observes `lock ==
 LOCKED_B`, and once again the threads concurrently conclude that each has
 exclusive access to the resource.  That doesn't work either!  Let's abandon the
