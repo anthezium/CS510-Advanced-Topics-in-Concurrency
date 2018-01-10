@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if [ "$#" -ne 3 ]; then
   echo "Usage: ./run MAX_THREADS N_OPS N_RUNS"
   exit 1

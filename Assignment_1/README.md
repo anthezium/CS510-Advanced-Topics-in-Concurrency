@@ -293,7 +293,7 @@ situations that trigger bus traffic).
 
 #### A note on resource sharing, measurement accuracy, and interference
 
-Since we'll all be using `ada` to run these benchmarks, it's possible that another
+Since we'll all be using `babbage` to run these benchmarks, it's possible that another
 student could be running benchmarks at the same time.  This will at the very least
 make benchmarking take longer, and could make your graphs look a little strange.
 To check whether this is going on, watch `htop` in another terminal to see if another
@@ -318,7 +318,7 @@ a few minutes or less, so the chance of collisions between users is relatively l
 Also, note that the correctness tests work no matter what, although they make take
 longer if another user is running tests.
 
-Finally, it's important to note that `ada` is heavily used, and is a virtual
+Finally, it's important to note that `babbage` is heavily used, and is a virtual
 machine that shares a host with other heavily used virtual machines.  It's an
 environment subject to frequent interference and weird behavior resulting from
 virtualization and hyperthreading on the host, and benchmark results often
