@@ -32,6 +32,21 @@ privately answer questions or take a look at your code, you can get in touch
 with him via [email](mailto:theod@pdx.edu).  He will also make an effort to
 lurk on IRC in `#cs510walpole` on irc.cat.pdx.edu (see below for details).
 
+### Submission instructions
+
+```bash
+pushd Assignment_1
+pushd data
+rm <old data and graphs>
+popd
+make clean
+popd
+tar czf Assignment_1-NAME.tar.gz Assignment_1/
+```
+ 
+Email the archive to [theod@pdx.edu](mailto:theod@pdx.edu) with subject
+`Assignment_1-NAME` and any questions and comments you'd like to share.
+
 ### What is a spinlock?
 
 We can use a lock to make sure that one thread has mutually exclusive access to a
