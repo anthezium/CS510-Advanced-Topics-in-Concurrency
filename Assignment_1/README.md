@@ -58,7 +58,7 @@ exclusive access to the resource.  That doesn't work either!  Let's abandon the
 "lock tells you who has it" train of thought for now; we'll come back to it in
 a later assignment.
 
-Let's again consider the case again threads A and B are racing to write
+Let's again consider the case where threads A and B are racing to write
 `LOCKED` to `lock`.  If each thread could tell the computer to only write
 `LOCKED` to `lock` if nobody else has snuck in and done it yet, and the
 computer lets the thread know whether the attempt succeeded or failed, then the
