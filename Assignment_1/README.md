@@ -319,8 +319,9 @@ Based on our observations in the last section, it seems that spamming
 increase the number of threads, especially in the presence of other bus
 traffic.  Let's see what happens when we build a delay into our lock
 acquisition function; we can write this modified version of `spin_lock()` in
-`void spin_wait_lock(volatile uint64_t *lock)` in `worker.c`.  For example, it
-is sufficient to just add a loop that, say, decrements an `int` 500 times, and
+`void spin_wait_lock(volatile uint64_t *lock)` in `worker.c`.  To be clear, the
+only goal here is to poll the spinlock less frequently.  For example, it is
+sufficient to just add a loop that, say, decrements an `int` 500 times, and
 crank through the loop in between calls to `spin_try_lock()`.
 
 Once you've implemented `spin_wait_lock()`, enable
