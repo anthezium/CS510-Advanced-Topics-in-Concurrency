@@ -35,6 +35,7 @@ lurk on IRC in `#cs510walpole` on irc.cat.pdx.edu (see below for details).
 ### Submission instructions
 
 ```bash
+cd CS510-Advanced-Topics-in-Concurrency
 pushd Assignment_1
 pushd data
 rm <old data and graphs>
