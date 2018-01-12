@@ -32,7 +32,8 @@ char *test_names[] = { "spin_try_lock_correctness_nograph"
                      , "spin_experimental_lock"
                      };
 
-// skip tests with 0s
+// skip tests with 0s, each value corresponds to the test in the same position
+// in test_names above
 uint64_t test_on[] = { 1
                      , 0
                      , 0

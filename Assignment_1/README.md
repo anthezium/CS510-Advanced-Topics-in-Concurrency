@@ -113,7 +113,7 @@ it succeeds and `0` if it fails.  Head over to `worker.c` and look for an empty
 function definition for `int spin_try_lock(volatile uint64_t *lock)`.  Fill in
 the body of the function, using `lockcmpxchgq()` to attempt to install the
 value `LOCKED` in the word that `lock` points to, which we expect to contain
-`UNLOCKED`, returning `0` if we succeeded in replacing `UNLOCKED`, and `1` if
+`UNLOCKED`, returning `1` if we succeeded in replacing `UNLOCKED`, and `0` if
 somebody else beat us to it and stored `LOCKED` at `*lock`.
 
 Next, we need a way for a thread, having completed its critical section, to
