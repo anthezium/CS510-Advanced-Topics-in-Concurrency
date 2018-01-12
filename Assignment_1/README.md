@@ -97,6 +97,13 @@ The `q` stands for "quad word", which is Intel's backward-looking way of saying
 what we mean when we say "word".  We'll use the C type `uint64_t` to represent
 these words.
 
+NOTE: There are a variety of interesting solutions to the critical section
+problem that don't use atomic instructions, such as 
+[Peterson's Algorithm](https://en.wikipedia.org/wiki/Peterson%27s_algorithm) 
+and 
+[Simpson's 4-slot Algorithm](http://deploy-eprints.ecs.soton.ac.uk/116/1/sld.ch7.conc.pdf)
+(slides 7 and on), we just aren't exploring them in this assignment.
+
 To keep the compiler from rearranging our code, e.g. during optimizations, we
 need to use some other macros: If another thread might be loading from or
 storing to `x`, write `_CMM_STORE_SHARED(x,v);` instead of `x = v;`, and
