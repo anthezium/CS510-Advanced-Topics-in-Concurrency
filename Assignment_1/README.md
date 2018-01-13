@@ -373,8 +373,8 @@ previous graphs.
 
 Let's explore another way to minimize communication.  Instead of introducing a
 delay while polling with `spin_try_lock()`, let's poll by *loading* `*lock` in
-a tight loop, and then attempting `spin_try_lock()` only after we observe
-`*lock == UNLOCKED`.  Implement this approach in `void spin_read_lock(volatile
+a tight loop until we observe `*lock == UNLOCKED` before each attempt at
+`spin_try_lock()`.  Implement this approach in `void spin_read_lock(volatile
 uint64_t *lock)` in `worker.c`.  We'd like to compare the effect of delaying
 with the effect of polling with loads instead of `lockcmpxchgq()`, so don't
 include the delay loop from `spin_wait_lock()` in this implementation.
