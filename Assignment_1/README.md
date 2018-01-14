@@ -38,10 +38,12 @@ lurk on IRC in `#cs510walpole` on irc.cat.pdx.edu (see below for details).
 cd CS510-Advanced-Topics-in-Concurrency
 pushd Assignment_1
 pushd data
-rm <old data and graphs>
+# remove all data and graphs BESIDES the final ones you'd like me to look at
+rm <out-of-date data and graphs>
 popd
 make clean
 popd
+# where NAME is your name separated by underscores
 tar czf Assignment_1-NAME.tar.gz Assignment_1/
 ```
  
