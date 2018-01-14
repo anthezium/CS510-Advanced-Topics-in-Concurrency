@@ -112,11 +112,11 @@ were looping on the value of `x`, we would write `while(CMM_LOAD_SHARED(x)) {
 ... }` instead of `while(x) { ... }`, and if we were loading `x` into a local
 variable `y`, we would write `y = CMM_LOAD_SHARED(x)`.
 
-Note that storing a uint64_t with _CMM_STORE_SHARED() is atomic on x86_64.  It
-doesn't prevent accesses that would normally be reordered across a store (only
-subsequent loads on x86_64) from being reordered across it at runtime, but if
-you don't care about that, you can safely use this macro to unconditionally and
-atomically update a word that other threads may access.
+Note that storing an aligned uint64_t with _CMM_STORE_SHARED() is atomic on
+x86_64.  It doesn't prevent accesses that would normally be reordered across a
+store (only subsequent loads on x86_64) from being reordered across it at
+runtime, but if you don't care about that, you can safely use this macro to
+unconditionally and atomically update a word that other threads may access.
 
 ## Building Spinlocks
 
