@@ -130,17 +130,21 @@ consists of two numbers that can be separately updated atomically:
 * `next`, which is the last number that was handed out to somebody in line
 * `owner`, which is the number of the ticket that belongs to the current lock
   holder.
-To acquire the lock, you atomically increment `next`, grabbing its previous
-value as your number, and then spin until another thread updates `owner` to
-match your number (if there's nobody ahead of you in line, this will already be
-the case).  Now it's your turn to execute your critical section!
 
-To release the lock, you simply increment `owner`, to let your successor know
-that it's their turn.  Note that only the lock holder updates `owner`, so no
-other thread will race you here.
+Head over to `// TODO declare a type for ticket` in `tests.h`, and 
+define a type `ticket_state` with `uint64_t`s for `next` and `owner`.
 
-You'll need to use `lockxaddq()` (described above) to atomically increment
-`next`.
+Next, head over to `ticket_lock` in `worker.c`.  To acquire the lock, you
+atomically increment `next`, grabbing its previous value as your number, and
+then spin until another thread updates `owner` to match your number (if there's
+nobody ahead of you in line, this will already be the case).  Now it's your
+turn to execute your critical section!  You'll need to use `lockxaddq()`
+(described above) to atomically increment `next`.
+
+Finally, head over to `ticket_unlock` in `worker.c`.  To release the lock, you
+simply increment `owner`, to let your successor know that it's their turn.
+Note that only the lock holder updates `owner`, so no other thread will race
+you here.
 
 #### Testing your `ticket_lock()` and `ticket_unlock()` implementations
 
@@ -167,13 +171,40 @@ last assignment.  In particular, `spin_lock` and `spin_read_lock` (or
 `spin_experimental_lock`) establish helpful reference points, and
 `pthread_spin_lock` is still a good baseline.
 
+We've observed slightly smoother data with a smaller set of operations and
+multiple runs, like so
+
+```bash
+./bench 24 3000 80
+```
+
 #### Questions
-1.  How does `ticket_lock` compare to its unfair counterparts?
-2.  In particular, why is there a gap between `spin_lock` and `ticket_lock`?
+1. How does `ticket_lock` compare to its unfair counterparts?
+2. In particular, why is there a gap between `spin_lock` and `ticket_lock`?
+3. What memory location(s) are threads contending to update in this implementation?
+4. What memory location(s) are threads spinning on in this implementation?
+5. What communication (to whom) is triggered when `ticket_unlock` writes to `owner`?
 
 ### `abql_(no)sharing_lock()` and `abql_(no)sharing_unlock()`
 
-TODO
+Let's explore a queueing lock that works roughly the same way as `ticket_lock`
+on the acquisition side, but spreads out spinning and successor notifications
+to per-thread words in memory on the release side, rather than the single word
+`owner` used by all waiting threads in `ticket_lock`.  You've read about this
+Array-Based Queueing Lock (AQBL) in 
+[Anderson 1990](http://www.cs.pdx.edu/~walpole/class/cs510/papers/02.pdf).
+See Table V for Anderson's ABQL implementation.  NOTE: Anderson's
+`ReadAndIncrement` corresponds to our `lockxaddq`.
+
+Instead of 
+
+#### Questions
+6. How does `abql_sharing_lock` compare to `abql_nosharing_lock`?  Why?
+7. What memory location(s) are threads contending to update in this implementation?
+8. What memory location(s) are threads spinning on in this implementation?
+9. What communication (to whom) is triggered when `abql_(no)sharing_unlock`
+   writes to `flags_(no)sharing[successor_index].val`?
+10. How does `abql_nosharing_lock` compare to `ticket_lock` and why?
 
 ### (Optional) `mcs_(no)sharing_lock()` and `mcs_(no)sharing_unlock()`
 
@@ -304,7 +335,7 @@ rebuild to check and benchmark your implementations as usual.
 #### Questions
 1. How do the `sharing` and `nosharing` variants of MCS compare?  Do they
    differ as much as `abql_sharing_lock` and `abql_nosharing_lock`?  Why?
-2.  How does MCS compare to ABQL?  Does one consistently beat the other?  If not,
+2. How does MCS compare to ABQL?  Does one consistently beat the other?  If not,
    when does MCS win?  When does ABQL win?  Why?
 3. Compare Figures 15 through 17 with Figure 18 in
    [Mellor-Crummey and Scott 1991](https://cis.temple.edu/~qzeng/cis5512-fall2015/papers/p21-mellor-crummey.pdf).
@@ -313,8 +344,7 @@ rebuild to check and benchmark your implementations as usual.
 4. Why do you think Mellor-Crummey and Scott included 3 graphs for tests with
    "empty" critical sections and only 1 with a nonempty ("small") critical
    section?
-5. For each instance where MCS or ABQL beats the other, why do you think that's
    happening?
-6. BONUS: How do the `lockcmpxchgq`-based and alternative `unlock`
+5. BONUS: How do the `lockcmpxchgq`-based and alternative `unlock`
    implementations' performance compare?  Why?
-7. BONUS: Explain how the alternative `unlock` implementation breaks fairness.
+6. BONUS: Explain how the alternative `unlock` implementation breaks fairness.
