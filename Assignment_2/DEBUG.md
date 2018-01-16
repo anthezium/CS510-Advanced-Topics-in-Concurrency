@@ -12,7 +12,14 @@ To get this set up, uncomment the line
 ```make
 #DEBUG           = TRUE
 ```
-in `Makefile`, then rebuild with `make`, and then run the test harness attached to gdb, e.g.
+in `Makefile`, then rebuild with `make`. 
+
+NOTE: Your code will sometimes have _different performance characteristics_
+when built this way.  Once you've resolved or learned what you needed from
+debugging, remember to comment that line back out and run `make` again before
+benchmarking.
+
+Next, run the test harness attached to gdb, e.g.
 ```bash
 gdb --args ./test 4 28 8 1
 ```
