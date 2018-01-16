@@ -8,11 +8,11 @@ In this assignment, we're exploring the design space for spinlocks that provide
 a fairness property (in addition to solving the critical section problem):
 If thread A's acquisition attempt takes effect before thread B's acquisition attempt,
 thread A will get the lock before thread B.  In all the implementations we'll explore,
-the is achieved by tying the order in which threads acquire the lock to the coherence
+this is achieved by tying the order in which threads acquire the lock to the coherence
 order for a word in memory.
 
 The series of steps in this assignment build on one-another only conceptually,
-so can complete the implementations in any order to get things working (just
+so you can complete the implementations in any order to get things working (just
 compare all of them once you're done).  There are numbered questions
 throughout the assignment; we recommend thinking through these questions
 carefully and writing down short concrete answers before moving on to the next
