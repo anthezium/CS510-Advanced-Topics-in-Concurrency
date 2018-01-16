@@ -142,7 +142,7 @@ other thread will race you here.
 You'll need to use `lockxaddq()` (described above) to atomically increment
 `next`.
 
-### Testing your `ticket_lock()` and `ticket_unlock()` implementations
+#### Testing your `ticket_lock()` and `ticket_unlock()` implementations
 
 As usual, turn on `ticket_correctness_test` to test this implementation
 and `ticket_lock` to benchmark it.
@@ -162,235 +162,159 @@ However, there isn't any way to distinguish between time wasted because of
 unfairness and time wasted by e.g. atomic instruction overhead.
 
 Once you're passing this correctness test, it may be helpful to compare the
-performance of this implementation to some of your spinlocks from the last
-assignment.  In particular, `spin_lock` and `spin_read_lock` (or
+performance of this implementation to some of your unfair spinlocks from the
+last assignment.  In particular, `spin_lock` and `spin_read_lock` (or
 `spin_experimental_lock`) establish helpful reference points, and
 `pthread_spin_lock` is still a good baseline.
 
 #### Questions
+1.  How does `ticket_lock` compare to its unfair counterparts?
+2.  In particular, why is there a gap between `spin_lock` and `ticket_lock`?
 
-STOPPED HERE
+### `abql_(no)sharing_lock()` and `abql_(no)sharing_unlock()`
 
-### `spin_lock()`
+TODO
 
-Once you've convinced yourself that `spin_try_lock()` and `spin_unlock()` are
-correct by running some experiments, you'll have seen some messages like
+### (Optional) `mcs_(no)sharing_lock()` and `mcs_(no)sharing_unlock()`
 
-```
--1: spin_try_lock_correctness_nograph succeeded for nt 24,
-my_spinlock_shared_counter: 535, sum: 535, n_ops: 10000.  Values are nonzero
-and the same, so the lock is working correctly.
-```
+Another queueing lock is the MCS lock, described accessibly [on LWN](https://lwn.net/Articles/590243/) and originally introduced in
+[Mellor-Crummey and Scott 1991](https://cis.temple.edu/~qzeng/cis5512-fall2015/papers/p21-mellor-crummey.pdf) 
+(see Figures 5 and 7).  NOTE: This paper uses alternate names for our
+primitives.  `fetch_and_store` corresponds to `xchgq`, while `compare_and_swap`
+corresponds to `lockcmpxchgq`.
 
-If only 535 increments actually occurred, then the other 9465 attempts must
-have resulted in `spin_try_lock()` returning `0`, that is, a thread observing
-that some other thread currently holds `my_spinlock` and therefore failing to
-acquire it and perform an increment.  This isn't too surprising, since we have
-24 threads competing for `my_spinlock` in this case (note `for nt 24` above).
+The MCS lock, named after its inventors, is basically the linked list to ABQL's
+array.  To hand off the lock, the lock holder still notifies its successor that
+the successor can proceed, much like how the lock holder updates its
+successor's `flags_(no)sharing` value in `abql_(no)sharing_release()`.  Instead
+of an array of flags, we have a local pair of values `next` and `locked` for
+each thread (`local_lock`), plus another global pair that new threads use to
+join the queue (`global_lock`).
 
-What we really need is a lock acquisition function that *always works*.  Well,
-we could just keep spamming `spin_try_lock()` until it returns `1`, right?
-Let's give that a try.  Head over to `void spin_lock(volatile uint64_t *lock)`
-in `worker.c`, and replace the `TODO` with some code that calls
-`spin_try_lock()` in a tight loop until it returns `1`.  If you'd prefer to use
-`lockcmpxchgq()` directly instead of `spin_try_lock()`, that's fine too.
+If `global_lock->next` is null, there is no queue (and so no tail of the
+queue), and the lock is not held.  
+Otherwise, `global_lock->next` points to the tail of the queue of local locks,
+each corresponding to a thread waiting in line to acquire the lock (besides the
+head, which corresponds to the lock holder).
 
-This code doesn't return until the lock is acquired; it just keeps trying to get it,
-or in other words, it *busy-waits*.
+The holder's local lock is at the head of the queue, with its
+`local_lock->next` pointing to the holder's successor's lock, starting a chain
+that ends at the queue tail.  If `local_lock->next == local_lock` or
+`local_lock->next` is null, then the holder has no successor, and is alone in
+the queue (at least until one comes along, which could happen at any time).
 
-We don't need to change `spin_unlock()` to work with this implementation, or any 
-subsequent implementation in this assignment.
+If `CMM_LOAD_SHARED(local_lock[i]->locked) == LOCKED`, then thread `i` is
+waiting for its predecessor to update `local_lock[i]->locked` to `UNLOCKED`.
+This is how the predecessor hands off the lock to thread `i`.  Otherwise,
+`local_lock[i]-> LOCKED` is always `UNLOCKED`.
 
-### Testing your `spin_lock()` implementation
+#### Preparing data structures
 
-Open `tests.c` and take a look at the array `test_names`, which enumerates the
-tests that are available, and the array `test_on`, which determines whether the
-test at the same index in `test_names` will be run.  Right now, the test
-harness is set up to only run the first test,
-`"spin_try_lock_correctness_nograph"`.  The `"correctness"` part indicates that
-it's a test that checks whether the `spin_try_lock()` implementation is
-correct, not a benchmark that measures the performance of `spin_try_lock()`.
+To implement this, it will help to declare a type for these locks.  For now, we
+won't worry about false sharing, and add a definition for the type
+`mcs_sharing` to `tests.h` where there it says `// TODO declare a type for
+mcs_sharing` with `uint64_t` members `next` and `locked`.  Giving these members
+this type will necessitate some casting back and forth between `mcs_sharing*`
+and `uint64_t` in the implementation, but makes it easier to work with our
+primitive operations, which expect `uint64_t`s.
 
-To test the correctness of `spin_lock()`, we'll need to change the `0` in `test_on`
-corresponding to `spin_lock_correctness_nograph` to a `1`, rebuild the test
-harness with `make`, and run it as before with `run`.  When your implementation
-is working correctly, you should see a message like
+Next, head over to `// TODO declare and initialize data for mcs with sharing`
+in `tests.c` and declare and initialize an array of `n_threads` `mcs_sharing`s,
+each with `next` set to `0` and `locked` set to `UNLOCKED`.  Point
+`mcss_sharing` to this array.  Now `&mcss_sharing[i]` will be supplied as
+`local_lock` to each call to `mcs_sharing_(un)lock()`, where `i` is the thread
+number (that is, the `i` field in `ti_data_in`) of the caller.  `global_lock`
+will contain another instance of `mcs_sharing`, initialized in the same way,
+indicating that the lock is initially not held.
 
-```
--1: spin_lock_correctness_nograph succeeded for nt 24,
-my_spinlock_shared_counter: 10000, sum: 10000, n_ops: 10000.  Values are
-nonzero and the same, so the lock is working correctly.
-```
+#### `mcs_sharing_lock()`
 
-Now the number of increments is equal to the number of operations attempted,
-since each call to `spin_lock()` busy-waits until it has successfully acquired
-`lock`, so workers successfully acquire the lock for each operation, and
-are able to always increment the local and shared counters.
+Now we're ready to implement the operations for this lock.  Head over to the
+definition of `mcs_sharing_lock()` in `worker.c`.  To acquire the lock, clear
+your `local_lock->next`, then `xchgq` `global_lock->next` for your `local_lock`
+to install your lock as the new tail of the queue.
 
-### Benchmarking your `spin_lock()` implementation
+If it comes back that there was no old tail, you're the only thread in the
+queue right now, and you're done.  Otherwise, you need to put your lock after
+the old tail in the queue.  Since you'll be waiting for the old tail to finish,
+mark `local_lock->locked` as `LOCKED`, and then let the thread corresponding to
+the old tail know that you're its successor by updating the old tail's `next`
+field to point to your `local_lock`.  Now that your lock is linked into the
+queue, all you need to do is wait for your predecessor to give you the go-ahead
+by updating `local_lock->locked` to `UNLOCKED`.  Once that happens, you've
+successfully acquired the lock.
 
-Now we know that `spin_lock()` is correct, but we don't know how efficient it is
-compared to other forms of synchronization.  To get an idea of how we're doing,
-we'll use the spinlock implementation from pthreads `pthread_spin_lock` as a baseline.
+#### `mcs_sharing_unlock()`
 
-We need to turn on two benchmarking tests in `test_on` in `tests.c`: 
-* `pthread_spin_lock`
-* `spin_lock`
+Head over to `mcs_sharing_unlock()` in `worker.c`.  To release the lock, first
+check whether you have a successor (that is, whether `local_lock->next` is
+non-null).
 
-We aren't including a benchmark for `spin_try_lock()` here since it's an
-apples-to-oranges comparison, as `spin_lock()` and `pthread_spin_lock()` both
-busy-wait until a successful acquisition, and `spin_try_lock()` does not.
+If you have a successor, all you need to do is update your successor's lock's
+`locked` field to `UNLOCKED`.  Now you've handed the lock off to your
+successor, and are done.
 
-Now, rebuild the test harness and use `bench` to run benchmarks.
+If you don't have a successor, things are little more complicated.
+`global_lock->next` _should_ point to your `local_lock` since there is nobody
+else in the queue, but you need to allow for the possibility that other threads
+snuck in and added themselves to the queue after you observed
+`local_lock->next` to be null.  You can use `lockcmpxchgq()` here to update
+`global_lock->next` to `0` if it still holds `local_lock` (nobody snuck in).
+In this case, you've removed yourself as the last remaining queue member, the
+lock is no longer held, and you're done.  If `global_lock->next` now points to
+a different lock, then some other thread has concurrently added itself to the
+queue, and thinks you're its predecessor.  This other thread will eventually
+update your `local_lock->next` to point to its own lock (i.e. get behind you in
+line), so you need to wait for it to do that (to find out who the successor
+is), then update the successor's lock's `locked` field to `UNLOCKED`.  Now
+you've handed the lock off to your successor, and are done.
 
-```bash
-make
-./bench 24 300000 1
-```
+#### `mcs_nosharing_(un)lock()`
 
-You should see output that ends with some messages about generated graphs:
+Let's see what the impact of false sharing is on MCS performance.  Fill in 
+`// TODO declare a type for mcs_nosharing` in `tests.h` with a version that is
+padded out fill a cache line (64 bytes, or 8 `uint64_t`s).
 
-```
-[1] "generating data/bench_t24_2018-01-09_12-27-07.csv_ticks_0accesses.pdf"
-[1] "generating data/bench_t24_2018-01-09_12-27-07.csv_ticks_8accesses.pdf"
-[1] "generating data/bench_t24_2018-01-09_12-27-07.csv_ticks_80accesses.pdf"
-```
+Fill in `// TODO declare and initialize data for mcs with nosharing` in
+`tests.c` with code that initializes and assigns to `mcss_nosharing` as before,
+but guarantees that the array `mcss_nosharing` is aligned on cache line
+boundaries (you can always declare a variable with the attribute
+`__attribute__((aligned (64)))`, for instance).
 
-Check out the graphs; they should have one line for `spin_lock` and another for
-`pthread_spin_lock`.  How do the implementations compare?
+Head over to `worker.c`, copy your implementations of `mcs_sharing_lock()` and
+`mcs_sharing_unlock()` and replace `sharing` with `nosharing` within the copies
+to obtain your `mcs_nosharing_(un)lock()` implementations.  Wouldn't
+language-level support for specializing the polymorphic code to multiple
+concrete types come in handy about now?
 
-#### Bus contention
+### Alternative `mcs_(no)sharing_unlock()`
 
-Note that 3 different graphs are generated, one labeled to represent test runs
-with "no critical section accesses" `_0accesses.pdf`, another with "1 cache
-line updated during critical section" `_8accesses.pdf`, and another with "10
-cache lines updated during critical section" `_80accesses.pdf`.  The latter 2
-tests simulate what threads usually do when they hold a lock, which is update
-some other memory protected by the lock.  We simulate this by doing racy
-increments to words in a shared circular buffer.  Because a given word in the
-buffer is updated by multiple threads, increments to that word by different
-threads require communication between those threads over the system bus.  This
-is the case whenever multiple threads try to update the same word (among other
-situations that trigger bus traffic). 
+BONUS: Mellor-Crummey and Scott propose an alternative `unlock` implementation that uses
+an unconditional exchange operation (such as `xchgq`) instead of
+`lockcmpxchgq`, in Figure 7 of
+[Mellor-Crummey and Scott 1991](https://cis.temple.edu/~qzeng/cis5512-fall2015/papers/p21-mellor-crummey.pdf) 
+and provide a detailed explanation (including an example) in the latter half of
+Section 2.4.  Implement this variant and compare your graphs.
 
-#### Questions
-1. Does calling `spin_try_lock(&my_spinlock)` over and over again (even after
-   we've just observed that `my_spinlock` is held) every time we need to get
-   `my_spinlock` affect how long it takes to finish a set of operations?  Does
-   each call require threads to communicate, and if so, what shared resources
-   does that communication use?
-2. How does this implementation scale as we increase the number of threads?
-   Does passing the lock around and busy-waiting for it affect the time it
-   takes for all threads to crunch through the set of operations?  If so, is the
-   effect different for different numbers of threads?
-3. As we add bus traffic, first by updating a single cache line and then by
-   updating 10 cache lines while holding the lock, how do `spin_lock` and
-   `pthread_spin_lock` respond to this change, and why?
+#### Testing your implementations
 
-#### A note on resource sharing, measurement accuracy, and interference
-
-Since we'll all be using `babbage` to run these benchmarks, it's possible that another
-student could be running benchmarks at the same time.  This will at the very least
-make benchmarking take longer, and could make your graphs look a little strange.
-To check whether this is going on, watch `htop` in another terminal to see if another
-user is running a bunch of `./test` threads too.  If so, get in touch with that user
-in one of the following ways to negotiate a way to share benchmarking time:
-1. Via the `#cs510walpole` IRC channel on `irc.cat.pdx.edu`. 
-   See the [CAT documentation](https://cat.pdx.edu/services/irc/) 
-   for more information about getting connected and using IRC.
-2. Using the `write` command to make a message appear in their terminal:
-```bash
-$ write theod
-hello friend, will you be finished benchmarking soon?
-(CTRL+d to end)
-```
-3. Getting in touch via email.  CAT and ODIN usernames are usually the same, so
-   `username@pdx.edu` will probably work, but you could also use the mailing list
-   to broadcast to everybody in the course (as a last resort) at
-   [`cs510walpole@cecs.pdx.edu`](mailto:cs510walpole@cecs.pdx.edu).
-
-We've tuned the `./run` and `./bench` invocations in this assignment to take
-a few minutes or less, so the chance of collisions between users is relatively low.
-Also, note that the correctness tests work no matter what, although they make take
-longer if another user is running tests.
-
-Finally, it's important to note that `babbage` is heavily used, and is a virtual
-machine that shares a host with other heavily used virtual machines.  It's an
-environment subject to frequent interference and weird behavior resulting from
-virtualization and hyperthreading on the host, and benchmark results often
-fluctuate.  Try running a given benchmark multiple times and looking at the
-graphs that are produced to get an idea of the range of results, and if you
-produce a particular graph with results that just don't make sense, try running
-`./bench` again before you get too invested in being confused :)
-
-### `spin_wait_lock()`
-
-Based on our observations in the last section, it seems that spamming
-`spin_try_lock()` as quickly as possible does not scale particularly well as we
-increase the number of threads, especially in the presence of other bus
-traffic.  Let's see what happens when we build a delay into our lock
-acquisition function; we can write this modified version of `spin_lock()` in
-`void spin_wait_lock(volatile uint64_t *lock)` in `worker.c`.  To be clear, the
-only goal here is to poll the spinlock less frequently.  For example, it is
-sufficient to just add a loop that, say, decrements an `int` 500 times, and
-crank through the loop in between calls to `spin_try_lock()`.
-
-Once you've implemented `spin_wait_lock()`, enable
-`spin_wait_lock_correctness_nograph` and `spin_wait_lock` in `test_on` in
-`tests.c`, `make` again, `run` as above until you've passed the correctness
-tests, and then `bench` again as above and take a look at the generated graphs.
-There should be a `spin_wait_lock` line now in addition to the lines from
-previous graphs.
+Turn on `mcs_(no)sharing_correctness_test` and `mcs_(no)sharing_lock` and
+rebuild to check and benchmark your implementations as usual.
 
 #### Questions
-4. What result did you expect?  Are these graphs consistent with your expectation?
-5. Does `spin_wait_lock()` result in more or less communication than
-   `spin_lock()`?  Do the results shed any light on the relative merits of more
-   and less communication?
-6. Communication always comes at a cost, so we need to think carefully about how
-   much bus traffic our implementations generate.  How can we minimize communication in
-   our spinlock implementations?  Is there more than one way?
-7. If we have just observed `*lock == LOCKED`, how likely is it that
-   `spin_try_lock()` will succeed (returning `1`)?  Do you think that
-   `spin_try_lock(lock)`, which can trigger an update, requires the same
-   amount of communication as just loading the value of `my_spinlock`?  Why?  Do
-   you think that these operations require unidirectional or bidirectional
-   communication, and why?
-
-### `spin_read_lock()`
-
-Let's explore another way to minimize communication.  Instead of introducing a
-delay while polling with `spin_try_lock()`, let's poll by *loading* `*lock` in
-a tight loop until we observe `*lock == UNLOCKED` before each attempt at
-`spin_try_lock()`.  Implement this approach in `void spin_read_lock(volatile
-uint64_t *lock)` in `worker.c`.  We'd like to compare the effect of delaying
-with the effect of polling with loads instead of `lockcmpxchgq()`, so don't
-include the delay loop from `spin_wait_lock()` in this implementation.
-
-Once you've implemented `spin_read_lock()`, enable
-`spin_read_lock_correctness_nograph` and `spin_read_lock` in `test_on` in
-`tests.c`, `make` again, `run` as above until you've passed the correctness
-tests, and then `bench` again as above and take a look at the generated graphs.
-There should be a `spin_read_lock` line now in addition to the lines from
-previous graphs.
-
-#### Questions
-8. What result did you expect?  Are these graphs consistent with your expectation?
-9. Does `spin_try_lock(lock)` always return `1` after we observe `*lock ==
-   UNLOCKED`?  Why or why not?  If not, what does your implementation do in
-   this situation?
-10. Do the results suggest that one way of minimizing communication is better
-    than the other?
-
-### (Optional) `spin_experimental_lock()`
-
-Finally, we offer a chance for intrepid souls to explore combining the
-techniques we've tried above, and anything else you can imagine or read about
-in the realm of spinlock implementation.  How close can you get to `pthread_spin_lock`?
-How is `pthread_spin_lock` [implemented](https://sourceware.org/git/?p=glibc.git;a=blob;f=nptl/pthread_spin_lock.c;h=58c794b5da9aaeac9f0082ea6fdd6d10cabc2622;hb=HEAD) anyway? 
-You may find the `xchgq()` primitive implemented in `util.h` helpful in this exploration.
-Play and trial and error are the substance of experiential learning, so go crazy.
-
-In keeping with previous steps, implement `spin_experimental_lock()` in `worker.c`,
-and turn on `spin_experimental_lock_correctness_nograph` and `spin_experimental_lock` in
-`test_on` in `tests.c`, then `make`, `run`, `bench` and repeat as usual.
+1. How do the `sharing` and `nosharing` variants of MCS compare?  Do they
+   differ as much as `abql_sharing_lock` and `abql_nosharing_lock`?  Why?
+2.  How does MCS compare to ABQL?  Does one consistently beat the other?  If not,
+   when does MCS win?  When does ABQL win?  Why?
+3. Compare Figures 15 through 17 with Figure 18 in
+   [Mellor-Crummey and Scott 1991](https://cis.temple.edu/~qzeng/cis5512-fall2015/papers/p21-mellor-crummey.pdf).
+   Do `mcs` and `anderson` (ABQL), compare in these figures the same way that
+   MCS and ABQL compare in your graphs?
+4. Why do you think Mellor-Crummey and Scott included 3 graphs for tests with
+   "empty" critical sections and only 1 with a nonempty ("small") critical
+   section?
+5. For each instance where MCS or ABQL beats the other, why do you think that's
+   happening?
+6. BONUS: How do the `lockcmpxchgq`-based and alternative `unlock`
+   implementations' performance compare?  Why?
+7. BONUS: Explain how the alternative `unlock` implementation breaks fairness.
