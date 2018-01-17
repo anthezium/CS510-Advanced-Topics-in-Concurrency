@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -x
+
+if [ "$#" -ne 3 ]; then
+  echo "Usage: ./run MAX_THREADS N_OPS N_RUNS"
+  exit 1
+fi
+ 
+MAX_THREADS="$1"
+N_OPS="$2"
+N_RUNS="$3"
+
+# reserve at least 2 CPUs for other users
+CPUS=$(echo "$(grep -c 'processor' /proc/cpuinfo) - 2" | bc)
+
+time ./test $MAX_THREADS $CPUS $N_OPS $N_RUNS

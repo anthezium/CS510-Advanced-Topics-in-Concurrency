@@ -131,10 +131,9 @@ consists of two numbers that can be separately updated atomically:
 * `owner`, which is the number of the ticket that belongs to the current lock
   holder.
 
-Head over to `// TODO declare a type for ticket` in `tests.h`, and define a
-type `ticket_state` with `uint64_t`s for `next` and `owner`.  As you implement
-the operations below, consider whether `next` and `owner` should be on the same
-cache line or not. 
+Head over to `// define a type for ticket` in `tests.h`, and familiarize
+yourself with the type `ticket_state`.  As you implement the operations below,
+consider whether `next` and `owner` should be on the same cache line or not. 
 
 Next, head over to `ticket_lock` in `worker.c`.  To acquire the lock, you
 atomically increment `next`, grabbing its previous value as your number, and
@@ -170,8 +169,9 @@ unfairness and time wasted by e.g. atomic instruction overhead.
 Once you're passing this correctness test, it may be helpful to compare the
 performance of this implementation to some of your unfair spinlocks from the
 last assignment.  In particular, `spin_lock` and `spin_read_lock` (or
-`spin_experimental_lock`) establish helpful reference points, and
-`pthread_spin_lock` is still a good baseline.
+`spin_experimental_lock`) (just paste them into `worker.c` from your previous
+submission) establish helpful reference points, and `pthread_spin_lock` is
+still a good baseline.
 
 We've observed slightly smoother data with a smaller set of operations and
 multiple runs, like so
@@ -200,8 +200,8 @@ See Table V for Anderson's ABQL implementation.  NOTE: Anderson's
 
 #### Preparing data structures
 
-Head over to `// TODO declare a type for abql_sharing` in `tests.h` and define a type
-`flag_sharing` that just contains a single `uint64_t` `val`.  
+Head over to `// define a type for abql_sharing` in `tests.h` and familiarize
+yourself with the `flag_sharing` type.
 
 Next, head over to `// TODO declare and initialize data for abql_sharing` in
 `tests.c` and declare and initialize an array of `n_threads` `flag_sharing`s,
@@ -254,7 +254,7 @@ section problem.
 
 #### `abql_nosharing_(un)lock()`
 
-Head over to `// TODO declare a type for abql_nosharing` in `tests.h` and
+Head over to `// TODO define a type for abql_nosharing` in `tests.h` and
 define a type `flag_nosharing` that still contains a single `uint64_t` `val`,
 but also contains enough padding to occupy an entire cache line (8 words or 64
 bytes in a cache line).
@@ -318,13 +318,13 @@ This is how the predecessor hands off the lock to thread `i`.  Otherwise,
 
 #### Preparing data structures
 
-To implement this, it will help to declare a type for these locks.  For now, we
-won't worry about false sharing, and add a definition for the type
-`mcs_sharing` to `tests.h` where there it says `// TODO declare a type for
-mcs_sharing` with `uint64_t` members `next` and `locked`.  Giving these members
-this type will necessitate some casting back and forth between `mcs_sharing*`
-and `uint64_t` in the implementation, but makes it easier to work with our
-primitive operations, which expect `uint64_t`s.
+To implement this, it will help to define a type for these locks.  For now, we
+won't worry about false sharing, and just use the definition for the type
+`mcs_sharing` in `tests.h` where there it says `// define a type for
+mcs_sharing`.  Giving its members type `uint64_t` will necessitate some casting
+back and forth between `mcs_sharing*` and `uint64_t` in the implementation, but
+makes it easier to work with our primitive operations, which expect
+`uint64_t`s.
 
 Next, head over to `// TODO declare and initialize data for mcs_sharing`
 in `tests.c` and declare and initialize an array of `n_threads` `mcs_sharing`s,
@@ -380,10 +380,10 @@ you've handed the lock off to your successor, and are done.
 #### `mcs_nosharing_(un)lock()`
 
 Let's see what the impact of false sharing is on MCS performance.  Fill in 
-`// TODO declare a type for mcs_nosharing` in `tests.h` with a version that is
+`// TODO define a type for mcs_nosharing` in `tests.h` with a version that is
 padded out fill a cache line (64 bytes, or 8 `uint64_t`s).
 
-Fill in `// TODO declare and initialize data for mcs with nosharing` in
+Fill in `// TODO declare and initialize data for mcs_nosharing` in
 `tests.c` with code that initializes and assigns to `mcss_nosharing` as before,
 but guarantees that the array `mcss_nosharing` is aligned on cache line
 boundaries (you can always declare a variable with the attribute
