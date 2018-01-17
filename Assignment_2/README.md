@@ -1,4 +1,4 @@
-# Assignment 3: FIFO Spinlocks
+# Assignment 2: FIFO Spinlocks
 
 **Due Date: Tuesday, January 23rd**
 
@@ -63,7 +63,7 @@ fairness can in extreme cases lead to complete *starvation*, e.g. thread B
 continually failing to make any progress.  People who write concurrent programs
 observe problems resulting from unfairness in practice.  For example,
 Nick Piggin (a Linux contributor) cites some anecdotal evidence of this
-(here)[https://lwn.net/Articles/267968/]:
+[here](https://lwn.net/Articles/267968/):
 
 > On an 8 core (2 socket) Opteron, spinlock unfairness is extremely noticable,
 > with a userspace test having a difference of up to 2x runtime per thread, and
