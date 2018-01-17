@@ -131,8 +131,10 @@ consists of two numbers that can be separately updated atomically:
 * `owner`, which is the number of the ticket that belongs to the current lock
   holder.
 
-Head over to `// TODO declare a type for ticket` in `tests.h`, and 
-define a type `ticket_state` with `uint64_t`s for `next` and `owner`.
+Head over to `// TODO declare a type for ticket` in `tests.h`, and define a
+type `ticket_state` with `uint64_t`s for `next` and `owner`.  As you implement
+the operations below, consider whether `next` and `owner` should be on the same
+cache line or not. 
 
 Next, head over to `ticket_lock` in `worker.c`.  To acquire the lock, you
 atomically increment `next`, grabbing its previous value as your number, and
@@ -177,8 +179,8 @@ multiple runs, like so
 ```bash
 ./bench 24 3000 80
 ```
-
 #### Questions
+
 1. How does `ticket_lock` compare to its unfair counterparts?
 2. In particular, why is there a gap between `spin_lock` and `ticket_lock`?
 3. What memory location(s) are threads contending to update in this implementation?
@@ -196,19 +198,89 @@ Array-Based Queueing Lock (AQBL) in
 See Table V for Anderson's ABQL implementation.  NOTE: Anderson's
 `ReadAndIncrement` corresponds to our `lockxaddq`.
 
-Head over to `// TODO declare a type for abql_sharing` in `tests.h` and define a type
-`flag_sharing` that just contains a single `uint64_t` `val`.  Next, 
-head over to `// TODO declare and initialize data for abql_sharing` in `tests.c`
-and STOPPED HERE
+#### Preparing data structures
 
-Instead of atomically incrementing `next` and spinning on 
+Head over to `// TODO declare a type for abql_sharing` in `tests.h` and define a type
+`flag_sharing` that just contains a single `uint64_t` `val`.  
+
+Next, head over to `// TODO declare and initialize data for abql_sharing` in
+`tests.c` and declare and initialize an array of `n_threads` `flag_sharing`s,
+where the first element has `val` set to `HAS_LOCK` and each subsequent element
+has `val` set to `MUST_WAIT`.  Point `flags_sharing` to this array.  Now
+`flags_sharing` will be supplied as `flags` to each call to
+`abql_sharing_(un)lock()`.  Additionally, note that `queue_last_sharing` is
+declared in `tests.h`, initialized to `0` in `tests.c`, and will be supplied as
+`queue_last` to each call. 
+
+#### `abql_sharing_lock()`
+
+Head over to `abql_sharing_lock()` in `worker.c`.  Instead of atomically
+incrementing `next` and then spinning on `owner` (along with all other threads
+waiting for the lock) as in `ticket_lock`, this lock acquisition operation will
+atomically increment `queue_last`, and use the value handed back from the
+atomic increment (the previous value of `queue_last`, uniquely returned to this
+thread) as an index into `flags`, indicating which element in the array this
+thread should spin on.  This way, each thread in the queue ends up spinning on
+a different `flags[i].val`, so updates to e.g. your predecessor's
+`flags[j].val` won't require your cached copy of `flags[i].val` to be
+invalidated (which takes time).  Right?  When you index into `flags`, though,
+note that `queue_last` just keeps growing as this algorithm proceeds,
+while there are only `n_threads` elements in `flags`, so you'll need to wrap
+around.
+
+Store this index in `*my_place`, because we'll need it to persist from this
+call to `abql_sharing_lock()` to the corresponding call to
+`abql_sharing_unlock()`. Next, wait for your flag to no longer be `MUST_WAIT`.
+When this happens, it's because your predecessor in the queue is letting you
+know that it's your turn, so you can just set the flag back to `MUST_WAIT` for
+the next thread who ends up here, and proceed on your merry way.
+
+#### `abql_sharing_unlock()`
+
+Head over to `abql_sharing_unlock()`.  We still have `*my_place` from the call
+to `abql_sharing_lock()`, so we know where our flag is.  The thread who entered
+the queue after us got back the next value of `queue_last` as its... place, and
+that is just `*my_place + 1` (we're atomically _incrementing_), so we know
+where our successor's flag is, too.  All that remains, then, is to tap our
+successor on the shoulder and let them know it's their turn by writing
+`HAS_LOCK` to their flag. 
+
+#### Checking for (partial) correctness
+
+Before implementing the `nosharing` verions, it will simplify things to check
+`abql_sharing_(un)lock()` by turning on `abql_sharing_correctness_nograph` in
+`tests.c` and verifying that your implementations correctly solve the critical
+section problem.
+
+#### `abql_nosharing_(un)lock()`
+
+Head over to `// TODO declare a type for abql_nosharing` in `tests.h` and
+define a type `flag_nosharing` that still contains a single `uint64_t` `val`,
+but also contains enough padding to occupy an entire cache line (8 words or 64
+bytes in a cache line).
+
+Next, head over to `// TODO declare and initialize data for abql_nosharing` in
+`tests.c` and declare and initialize an array of `n_threads` `flag_nosharing`s
+(which is itself aligned on a cache line boundary), where the elements are
+initialized as before.  Point `flags_nosharing` to this array.  
+
+`nosharing` versions of all our familiar variables will be passed to
+`abql_nosharing_(un)lock()` in the same way, which is convenient, because it
+means we can just copy the text of the `sharing` version of each operation and
+replace `sharing` with `nosharing`.
+
+#### Testing your implementations
+
+Turn on `abql_nosharing_correctness_nograph`, `abql_sharing_lock`,
+`abql_nosharing_lock` (and leave `ticket_lock` on) and `bench` as before.
 
 #### Questions
-6. How does `abql_sharing_lock` compare to `abql_nosharing_lock`?  Why?
-7. What memory location(s) are threads contending to update in this implementation?
-8. What memory location(s) are threads spinning on in this implementation?
-9. What communication (to whom) is triggered when `abql_(no)sharing_unlock`
-   writes to `flags_(no)sharing[successor_index].val`?
+6.  How does `abql_sharing_lock` compare to `abql_nosharing_lock`?  Why?
+7.  What memory location(s) are threads contending to update in this implementation?
+8.  What memory location(s) are threads spinning on in this implementation?
+9.  What communication (to whom) is triggered when `abql_nosharing_unlock`
+    writes to `flags[successor_index].val`?  How does this compare
+    to the communication triggered by `ticket_unlock`?
 10. How does `abql_nosharing_lock` compare to `ticket_lock` and why?
 
 ### (Optional) `mcs_(no)sharing_lock()` and `mcs_(no)sharing_unlock()`
@@ -254,7 +326,7 @@ this type will necessitate some casting back and forth between `mcs_sharing*`
 and `uint64_t` in the implementation, but makes it easier to work with our
 primitive operations, which expect `uint64_t`s.
 
-Next, head over to `// TODO declare and initialize data for mcs with sharing`
+Next, head over to `// TODO declare and initialize data for mcs_sharing`
 in `tests.c` and declare and initialize an array of `n_threads` `mcs_sharing`s,
 each with `next` set to `0` and `locked` set to `UNLOCKED`.  Point
 `mcss_sharing` to this array.  Now `&mcss_sharing[i]` will be supplied as
@@ -338,18 +410,18 @@ Turn on `mcs_(no)sharing_correctness_test` and `mcs_(no)sharing_lock` and
 rebuild to check and benchmark your implementations as usual.
 
 #### Questions
-1. How do the `sharing` and `nosharing` variants of MCS compare?  Do they
-   differ as much as `abql_sharing_lock` and `abql_nosharing_lock`?  Why?
-2. How does MCS compare to ABQL?  Does one consistently beat the other?  If not,
-   when does MCS win?  When does ABQL win?  Why?
-3. Compare Figures 15 through 17 with Figure 18 in
-   [Mellor-Crummey and Scott 1991](https://cis.temple.edu/~qzeng/cis5512-fall2015/papers/p21-mellor-crummey.pdf).
-   Do `mcs` and `anderson` (ABQL), compare in these figures the same way that
-   MCS and ABQL compare in your graphs?
-4. Why do you think Mellor-Crummey and Scott included 3 graphs for tests with
-   "empty" critical sections and only 1 with a nonempty ("small") critical
-   section?
-   happening?
-5. BONUS: How do the `lockcmpxchgq`-based and alternative `unlock`
-   implementations' performance compare?  Why?
-6. BONUS: Explain how the alternative `unlock` implementation breaks fairness.
+11. How do the `sharing` and `nosharing` variants of MCS compare?  Do they
+    differ as much as `abql_sharing_lock` and `abql_nosharing_lock`?  Why?
+12. How does MCS compare to ABQL?  Does one consistently beat the other?  If not,
+    when does MCS win?  When does ABQL win?  Why?
+13. Compare Figures 15 through 17 with Figure 18 in
+    [Mellor-Crummey and Scott 1991](https://cis.temple.edu/~qzeng/cis5512-fall2015/papers/p21-mellor-crummey.pdf).
+    Do `mcs` and `anderson` (ABQL), compare in these figures the same way that
+    MCS and ABQL compare in your graphs?
+14. Why do you think Mellor-Crummey and Scott included 3 graphs for tests with
+    "empty" critical sections and only 1 with a nonempty ("small") critical
+    section?
+    happening?
+15. BONUS: How do the `lockcmpxchgq`-based and alternative `unlock`
+    implementations' performance compare?  Why?
+16. BONUS: Explain how the alternative `unlock` implementation breaks fairness.
