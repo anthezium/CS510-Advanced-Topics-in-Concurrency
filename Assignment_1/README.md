@@ -414,3 +414,5 @@ Play and trial and error are the substance of experiential learning, so go crazy
 In keeping with previous steps, implement `spin_experimental_lock()` in `worker.c`,
 and turn on `spin_experimental_lock_correctness_nograph` and `spin_experimental_lock` in
 `test_on` in `tests.c`, then `make`, `run`, `bench` and repeat as usual.
+
+Copyright Ted Cooper, January 2018

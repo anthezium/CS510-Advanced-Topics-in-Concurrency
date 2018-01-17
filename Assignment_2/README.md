@@ -108,7 +108,7 @@ were looping on the value of `x`, we would write `while(CMM_LOAD_SHARED(x)) {
 ... }` instead of `while(x) { ... }`, and if we were loading `x` into a local
 variable `y`, we would write `y = CMM_LOAD_SHARED(x)`.
 
-Note that storing an aligned uint64_t with _CMM_STORE_SHARED() is atomic on
+Note that storing an aligned `uint64_t` with `_CMM_STORE_SHARED()` is atomic on
 x86_64.  It doesn't prevent accesses that would normally be reordered across a
 store (only subsequent loads on x86_64) from being reordered across it at
 runtime, but if you don't care about that, you can safely use this macro to
@@ -425,3 +425,5 @@ rebuild to check and benchmark your implementations as usual.
 15. BONUS: How do the `lockcmpxchgq`-based and alternative `unlock`
     implementations' performance compare?  Why?
 16. BONUS: Explain how the alternative `unlock` implementation breaks fairness.
+
+Copyright Ted Cooper, January 2018
