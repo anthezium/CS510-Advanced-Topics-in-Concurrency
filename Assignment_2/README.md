@@ -196,7 +196,12 @@ Array-Based Queueing Lock (AQBL) in
 See Table V for Anderson's ABQL implementation.  NOTE: Anderson's
 `ReadAndIncrement` corresponds to our `lockxaddq`.
 
-Instead of 
+Head over to `// TODO declare a type for abql_sharing` in `tests.h` and define a type
+`flag_sharing` that just contains a single `uint64_t` `val`.  Next, 
+head over to `// TODO declare and initialize data for abql_sharing` in `tests.c`
+and STOPPED HERE
+
+Instead of atomically incrementing `next` and spinning on 
 
 #### Questions
 6. How does `abql_sharing_lock` compare to `abql_nosharing_lock`?  Why?
