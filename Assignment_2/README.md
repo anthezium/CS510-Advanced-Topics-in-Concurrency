@@ -127,7 +127,7 @@ Basically, a ticket lock is like when you take a number at the DMV, except
 there's only one desk, and it's your job to update the number on display when
 you've met with the employee at the desk and finished your business.  It
 consists of two numbers that can be separately updated atomically:
-* `next`, which is the last number that was handed out to somebody in line
+* `next`, which is the next number that will be handed out to somebody in line
 * `owner`, which is the number of the ticket that belongs to the current lock
   holder.
 
