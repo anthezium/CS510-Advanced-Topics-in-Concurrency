@@ -132,8 +132,9 @@ consists of two numbers that can be separately updated atomically:
   holder.
 
 Head over to `// define a type for ticket` in `tests.h`, and familiarize
-yourself with the type `ticket_state`.  As you implement the operations below,
-consider whether `next` and `owner` should be on the same cache line or not. 
+yourself with the type `ticket_state` and the global declaration of
+`my_ticket_lock`.  As you implement the operations below, consider whether
+`next` and `owner` should be on the same cache line or not. 
 
 Next, head over to `ticket_lock` in `worker.c`.  To acquire the lock, you
 atomically increment `next`, grabbing its previous value as your number, and
@@ -200,7 +201,7 @@ See Table V for Anderson's ABQL implementation.  NOTE: Anderson's
 #### Preparing data structures
 
 Head over to `// define a type for abql_sharing` in `tests.h` and familiarize
-yourself with the `flag_sharing` type.
+yourself with the `flag_sharing` type and the global declaration of `flags_sharing`.
 
 Next, head over to `// TODO declare and initialize data for abql_sharing` in
 `tests.c` and declare and initialize an array of `n_threads` `flag_sharing`s,
@@ -323,7 +324,8 @@ won't worry about false sharing, and just use the definition for the type
 mcs_sharing`.  Giving its members type `uint64_t` will necessitate some casting
 back and forth between `mcs_sharing*` and `uint64_t` in the implementation, but
 makes it easier to work with our primitive operations, which expect
-`uint64_t`s.
+`uint64_t`s.  Also note the global declarations of `mcs_global_sharing` and 
+`mcss_sharing` below.
 
 Next, head over to `// TODO declare and initialize data for mcs_sharing`
 in `tests.c` and declare and initialize an array of `n_threads` `mcs_sharing`s,
