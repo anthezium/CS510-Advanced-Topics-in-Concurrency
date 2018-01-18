@@ -385,14 +385,14 @@ padded out fill a cache line (64 bytes, or 8 `uint64_t`s).
 Fill in `// TODO declare and initialize data for mcs_nosharing` in
 `tests.c` with code that initializes and assigns to `mcss_nosharing` as before,
 but guarantees that the array `mcss_nosharing` is aligned on cache line
-boundaries (you can always declare a variable with the attribute
+boundaries (you can always declare a variable with
 `__attribute__((aligned (64)))`, for instance).
 
 Head over to `worker.c`, copy your implementations of `mcs_sharing_lock()` and
 `mcs_sharing_unlock()` and replace `sharing` with `nosharing` within the copies
 to obtain your `mcs_nosharing_(un)lock()` implementations.  Wouldn't
-language-level support for specializing the polymorphic code to multiple
-concrete types come in handy about now?
+language-level support for specializing polymorphic code to multiple concrete
+types come in handy about now?
 
 ### Alternative `mcs_(no)sharing_unlock()`
 
@@ -420,7 +420,6 @@ rebuild to check and benchmark your implementations as usual.
 14. Why do you think Mellor-Crummey and Scott included 3 graphs for tests with
     "empty" critical sections and only 1 with a nonempty ("small") critical
     section?
-    happening?
 15. BONUS: How do the `lockcmpxchgq`-based and alternative `unlock`
     implementations' performance compare?  Why?
 16. BONUS: Explain how the alternative `unlock` implementation breaks fairness.
