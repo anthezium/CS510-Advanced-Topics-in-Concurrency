@@ -139,8 +139,7 @@ Next, head over to `ticket_lock` in `worker.c`.  To acquire the lock, you
 atomically increment `next`, grabbing its previous value as your number, and
 then spin until another thread updates `owner` to match your number (if there's
 nobody ahead of you in line, this will already be the case).  Now it's your
-turn to execute your critical section!  You'll need to use `lockxaddq()`
-(described above) to atomically increment `next`.
+turn to execute your critical section!
 
 Finally, head over to `ticket_unlock` in `worker.c`.  To release the lock, you
 simply increment `owner`, to let your successor know that it's their turn.
