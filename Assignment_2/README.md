@@ -363,20 +363,21 @@ If you have a successor, all you need to do is update your successor's lock's
 `locked` field to `UNLOCKED`.  Now you've handed the lock off to your
 successor, and are done.
 
-If you don't have a successor, things are little more complicated.
-`global_lock->next` _should_ point to your `local_lock` since there is nobody
-else in the queue, but you need to allow for the possibility that other threads
-snuck in and added themselves to the queue after you observed
-`local_lock->next` to be null.  You can use `lockcmpxchgq()` here to update
-`global_lock->next` to `0` if it still holds `local_lock` (nobody snuck in).
-In this case, you've removed yourself as the last remaining queue member, the
-lock is no longer held, and you're done.  If `global_lock->next` now points to
-a different lock, then some other thread has concurrently added itself to the
-queue, and thinks you're its predecessor.  This other thread will eventually
-update your `local_lock->next` to point to its own lock (i.e. get behind you in
-line), so you need to wait for it to do that (to find out who the successor
-is), then update the successor's lock's `locked` field to `UNLOCKED`.  Now
-you've handed the lock off to your successor, and are done.
+If you don't have a successor, things are little more complicated.  You've
+observed no successor, so `global_lock->next` _should_ already be pointing to
+your `local_lock` since there is nobody else in the queue, but you need to
+allow for the possibility that other threads snuck in and added themselves to
+the queue after you observed `local_lock->next` to be null.  You can use
+`lockcmpxchgq()` here to update `global_lock->next` to `0` if it still holds
+`local_lock` (nobody snuck in).  In this case, you've removed yourself as the
+last remaining queue member, the lock is no longer held, and you're done.  If
+`global_lock->next` now points to a different lock (that is, `lockcmpxchgq()`
+gave back a value `!= local_lock`), then some other thread has concurrently
+added itself to the queue, and thinks you're its predecessor.  This other
+thread will eventually update your `local_lock->next` to point to its own lock
+(i.e. get behind you in line), so you need to wait for it to do that (to find
+out who the successor is), then update the successor's lock's `locked` field to
+`UNLOCKED`.  Now you've handed the lock off to your successor, and are done.
 
 #### `mcs_nosharing_(un)lock()`
 
