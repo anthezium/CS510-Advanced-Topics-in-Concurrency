@@ -1,6 +1,6 @@
 # Assignment 2: FIFO Spinlocks
 
-**Due Date: Tuesday, January 23rd**
+**Due Date: 4:19pm on Tuesday, January 23rd**
 
 ## Overview
 
