@@ -300,11 +300,12 @@ each thread (`local_lock`), plus another global pair that new threads use to
 join the queue (`global_lock`).
 
 If `global_lock->next` is null, there is no queue (and so no tail of the
-queue), and the lock is not held.  This is initially the case, see the
-initializations of `mcs_global_(no)sharing` in tests.c.  Otherwise,
-`global_lock->next` points to the tail of the queue of local locks, each
-corresponding to a thread waiting in line to acquire the lock (besides the
-head, which corresponds to the lock holder).
+queue), and the lock is not held.  This is initially the case (otherwise,
+nobody could initially acquire it), see the initializations of
+`mcs_global_(no)sharing` in tests.c.  Otherwise, `global_lock->next` points to
+the tail of the queue of local locks, each corresponding to a thread waiting in
+line to acquire the lock (besides the head, which corresponds to the lock
+holder).
 
 The holder's local lock is at the head of the queue, with its
 `local_lock->next` pointing to the holder's successor's lock, starting a chain
