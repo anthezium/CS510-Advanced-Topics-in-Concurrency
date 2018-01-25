@@ -100,6 +100,10 @@ return value.
 All previously introduced primitives remain available (and will come in handy),
 and are implemented and documented in `util.h`.
 
+We'll need to use the `old = xchg(ptr, new)` primitive, defined in `util.h`.
+This primitive is an atomic unconditional swap, that is, it atomically swaps
+the current value in `*ptr` (returned as `old`) for `new`.
+
 To keep the compiler from rearranging our code, e.g. during optimizations, we
 need to use some other macros: If another thread might be loading from or
 storing to `x`, write `_CMM_STORE_SHARED(x,v);` instead of `x = v;`, and
