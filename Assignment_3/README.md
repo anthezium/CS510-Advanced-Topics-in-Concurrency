@@ -255,7 +255,7 @@ properties, and should already (and exclusively) be on.
 ./run 24 3000 10 36000
 ```
 
-This invocation `run` should be good enough for testing correctness.
+This `run` invocation should be good enough for testing correctness.
 
 #### Questions
 1. Can an enqueuer and dequeuer concurrently proceed in this implementation?  Why or why not?
