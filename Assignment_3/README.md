@@ -441,7 +441,7 @@ There are two groups of benchmarking tests.
   enqueues.
 
 Turn all of these tests on in `tests_on` in `tests.c`, turn the correctness
-tests off (to save time) and generate some cool graphs:
+tests off (to save time) and generate a cool graph:
 
 ```bash
 ./bench 24 3000 1000 36000
