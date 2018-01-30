@@ -258,7 +258,7 @@ properties, and should already (and exclusively) be on.
 Should be good enough for testing correctness.
 
 #### Questions
-1. Can an enqueuer and dequeuer concurrently proceed in this implementation?
+1. Can an enqueuer and dequeuer concurrently proceed in this implementation?  Why or why not?
 
 ### `nb_queue`
 
@@ -267,6 +267,11 @@ Now, let's implement the non-blocking concurrent queue from
 (see Figure 1).  Note that their `CAS()` corresponds to our `lockcmpxchgq()`,
 `new_node()` to `pool_allocate()`, `free()` to `pool_free()`, and `*pvalue` to
 `*ret`.
+
+NOTE: Below, I've used a naming convention where a tagged pointer is stored in
+a variable with a plain name, e.g. `head`, and the untagged version of the same
+pointer is stored in a corresponding variable that ends in `_ptr`, e.g.
+`head_ptr`.
 
 First, head over to `// define types for nb_node and nb_queue` in `worker.c`
 and familiarize yourself with these types.  Next, head over to `// statically
@@ -279,7 +284,9 @@ It is either the initial dummy we place below, or a subsequently dequeued node
 pressed into dummy service.  Thus, when the queue is empty, `queue->head` and
 `queue->tail` both point to the dummy (they are not `0`, as in `coarse_queue`),
 and `dummy->next == 0` (that is, there isn't a half-complete concurrent enqueue
-afoot).
+afoot).  When the queue is not empty, `queue->head` always points to the dummy
+node, while `queue->tail` points to the actual tail (unless we're in the middle
+of an enqueue operation, and `queue->tail` has temporarily fallen behind).
 
 Next, head over to `// TODO allocate and initialize new dummy node for
 nb_queue` in `worker.c`.  We need to set up the dummy node here before each
@@ -356,39 +363,106 @@ Head over to `int nb_dequeue(ti_data_in *d, volatile nb_queue *queue, uint64_t
 
 The basic idea is the same here, and only `queue->head` is pointing to the node
 we're dequeueing, so updating that successfully is sufficient to achieve our
-objective.  Nevertheless, we are upright citizens committed to always making
-progress, and will lend help to the tail-swinging cause if we encounter it
-unswung in the course of fulfilling our duties.  We repeat the following process.
+objective.  Nevertheless, we are upright non-blocking citizens, committed to
+always making progress, and will lend help to the tail-swinging cause if we
+encounter it unswung in the course of fulfilling our duties.  We repeat the
+following unlinking process.
 
-Observe `queue->head`, `queue->tail`, and the tail's `next` pointer.  As
-before, we observe `queue->head` again to detect whether our observations are
-spread across a concurrent dequeue (i.e.  `queue->head` has changed since our
-initial observation), which will update `queue->tail` (if it does) before it
-updates `queue->head`.
+Observe `queue->head`, then `queue->tail`, and then the head's `next` pointer.
+Note that because `queue->head` always points to the dummy node, head's `next`
+pointer (hereafter `next`) is either `0` (if the queue is empty) or points to
+a node that contains the value we're trying to dequeue.
 
-If they are not spread across a concurrent operation (that is, `queue->head`
-has not changed), then we have two cases to consider.  Either
-* The queue is empty, or there is an incomplete enqueue afoot which has yet to
-  update `queue->tail`.  When your observations of `queue->head` and
-  `queue->tail` are equal, then the dummy node's `next` pointer STOPPED HERE
+As before, we then observe `queue->head` again to detect whether our
+observations are spread across a concurrent dequeue (i.e. `queue->head` has
+changed since our initial observation), which would either update `queue->tail`
+(did some helping) before it updates `queue->head`, or just update
+`queue->head` (no opportunity for helping).
 
+If our observations are not spread across a concurrent dequeue (that is,
+`queue->head` has not changed), then we have two cases to consider.  Either
+* The queue is empty, or it was just empty, and there is an incomplete enqueue
+  afoot which has yet to update `queue->tail`.  This is the case when our
+  observations of `queue->head` and `queue->tail` are equal.  In this situation,
+  both point to the dummy node, so the `next` pointer we observed was the dummy's
+  `next` pointer.
+  * If we observed the dummy's `next` pointer to equal `0`, then no concurrent
+    enqueue was afoot, since it would have started by updating the dummy's
+    `next` pointer to something besides `0`, and we observed `queue->tail` before
+    we observed the dummy's `next` pointer, so we can't have observed the enqueue's
+    update to `queue->tail` but missed its update to the dummy's `next` pointer.
+    Since no concurrent enqueue was afoot, the queue remains empty, so we can't
+    dequeue anything and must indicate this by returning `0`.
+  * Otherwise, we observed the dummy's `next` pointer as nonzero (but also
+    observed `queue->head` equal to `queue->tail`), so a concurrent enqueue
+    must have updated the dummy's `next` pointer, but not yet swung `queue->tail`
+    to match it.  In this case, we can use `lockcmpxchgq()` to update `queue->tail`
+    (if it still matches our previous observation) to our observation of the
+    dummy's `next` pointer.  If this succeeds, we have contributed to the greater
+    good.  If not, that's fine, since it just means that another thread swung it
+    first.  Either way, we still haven't dequeued anything yet (or observed the queue
+    as empty), so we need to try the unlinking process again from the beginning with
+    fresh observations.
+* Otherwise, the queue has at least one node in it whose enqueue operation has
+  completed.  In this case, we can actually dequeue something!  Recall that
+  `queue->head` always points to the dummy node, so the value we're dequeuing
+  here is `next_ptr->val`.  We need to store this value to `*ret` before the next
+  step, more on that in a second.  Next, we need to retire the old dummy (our
+  observation of `queue->head`) and install the node we're dequeueing (`next`) as
+  the new dummy.  To avoid duplicate dequeues, we need to make sure that no
+  concurrent dequeue has beat us to this, so we need to use `lockcmpxchgq()` to
+  swap in `next` at `&queue->head`, provided it has not changed since our last
+  observation.  If this succeeds, we have dequeued node whose valued we copied to
+  `*ret`, and it is the new dummy.  If `lockcmpxchgq()` fails, then a concurrent
+  dequeuer (enqueuers don't update `queue->head`) beat us to dequeueing this
+  node, and try the unlinking process again with fresh observations.
+  
+Once we've succeeded in dequeueing a node, the old dummy we unlinked is no
+longer needed.  We can safely free it with `pool_free()`.  This is why we
+needed to copy the value to `*ret` above before installing its corresponding
+node as the new dummy: as soon as it becomes the new dummy, a concurrent
+dequeuer could unlink and free it, which would be a real bummer if we hadn't
+copied the value it contained yet.
 
+Our dequeue succeeded, so we can proudly return `1`.
+
+#### Testing your `nb_queue` implementation
+
+Flip on `nb_queue_correctness_nograph` in `tests_on` in `tests.c`, and use
+`run` as before to check this implementation against the same criteria as
+`coarse_queue`.
+
+#### Benchmarking your queue implementations
+
+There are two groups of benchmarking tests.
+* `coarse_queue` and `nb_queue` both run a workload of approximately half
+  enqueues and half dequeues in a random order (different for each run).
+* `coarse_queue_enq` and `nb_queue_enq` both run a workload of entirely
+  enqueues.
+
+Turn all of these tests on in `tests_on` in `tests.c`, turn the correctness
+tests off (to save time) and generate some cool graphs:
+
+```bash
+./bench 24 3000 1000 36000
+```
+
+It will take a bit longer than benchmarking runs for previous assignments.
+Since we aren't measuring locks anymore, the critical section accesses (which
+are there to simulate data updates inside critical sections) are turned off
+for these tests.  That means that we'll only be generating `00accesses` graphs,
+not the other two kinds we usually see.
 
 #### Questions
-
-
-x. Where would the ABA problem break this operation?  What could go wrong as a result?
-(A: The line `lockcmpxchgq(&queue->tail, tail, next);` assumes that if
-`queue->tail` is still `tail`, it's safe to make `next` the new tail.  If
-`tail` were concurrently freed and reallocated, and now happens to once again
-be the tail of the queue, `next` is unlikely to be its successor, since `next`
-was `head`'s successor last we checked, and chances are it did not also happen
-to be concurrently freed, reallocated, and installed in just the right place to
-make this work out.  At the very least, we'd lose the current tail and its
-successors (dropping one or more values from the queue).  We also have no
-guarantee that `next` has not been concurrently dequeued and freed, in which
-case we could end up with a duplicate dequeue (which could result in threads
-racing to free it), or even `next` being observed by one thread while another
-is in the process of rewriting its fields.)
+2. Can an enqueuer and dequeuer concurrently proceed in this implementation?
+3. How does `nb_queue` compare to `coarse_queue` (i.e. for a mixed workload)?
+4. How does `nb_queue_enq` compare to `coarse_queue_enq` (i.e. for a workload
+   of only enqueues)? 
+5. What primitives does `nb_enqueue()` use to make updates on a best-case
+   enqueue?  What about `coarse_enqueue()`?
+6. Do the implementations compare in the same way for both kinds of workloads?
+   Why or why not?
+7. Where would the ABA problem break this operation?  What could go wrong as a
+   result?
 
 Copyright Ted Cooper, January 2018
