@@ -380,7 +380,7 @@ changed since our initial observation), which would either update `queue->tail`
 `queue->head` (no opportunity for helping).
 
 If our observations are not spread across a concurrent dequeue (that is,
-`queue->head` has not changed), then we have two cases to consider.  Either
+`queue->head` has not changed), then we have two cases to consider:
 * The queue is empty, or it was just empty, and there is an incomplete enqueue
   afoot which has yet to update `queue->tail`.  This is the case when our
   observations of `queue->head` and `queue->tail` are equal.  In this situation,
