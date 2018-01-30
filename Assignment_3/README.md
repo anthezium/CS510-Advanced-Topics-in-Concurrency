@@ -129,7 +129,7 @@ a macro for you to use:
    `uint64_t`).
 2. `untagged_ptr = (node_type*)get_qptr(tagged_ptr)`, a macro that zeroes out
    the bottom 6 bits in a tagged pointer to yield something you can dereference
-   (after casting appropriate).
+   (after casting appropriately).
 3. `pool_free(d, untagged_ptr)`, which marks the cache line at `untagged_ptr`
    as available for reuse.
 
