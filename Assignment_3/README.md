@@ -240,8 +240,8 @@ ignoring synchronization overhead.
 
 We're testing the following properties to determine whether our concurrent
 queue implementations are correct:
-1. If value A is enqueued before value B, then A is also dequeued before B (if
-   dequeued).
+1. If a thread enqueues A before B, no thread dequeues B before A (if
+   both are dequeued).
 2. No values are dropped, and no values are duplicated.  That is, the total
    number of values enqueued is equal to the total number of values dequeued
    plus the total number of values remaining in the queue at the end of the test.
