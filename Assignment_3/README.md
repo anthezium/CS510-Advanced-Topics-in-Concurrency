@@ -117,7 +117,7 @@ aligned on a 64-byte boundary.  This means that the bottom 6 bits of these point
 will always be 0s.  As long as we remember to clear those bits before dereferencing
 a node pointer, we can keep some other stuff in those 6 bottom bits.
 2. If we put something different in those bits every time we reuse the node, we'll
-never have the "pointer" for successive incarnations, so `lockcmpxchgq()` will fail
+never have the same "pointer" for subsequent incarnations, so `lockcmpxchgq()` will fail
 when things have changed under us, so we avoid the ABA problem.
 3. We can represent `2^6 = 64` distinct values in those 6 bits, so we can use each
 cache line 64 times before resorting to other tricks to prevent the ABA problem.
@@ -327,7 +327,7 @@ the `next` pointer above.  If we do, we know that a subsequent update to
 subsequent update, we need to observe `queue->tail` after we observe the `next`
 pointer.  We had to observe `queue->tail` first in order to observe its `next`
 pointer, though, hence the two observations: the first just to get at `next`,
-the second to have observed it after `next`.
+the second to have observed `queue->tail` after `next`.
 
 If `queue->tail` has been concurrently updated, we need to start over again and
 make new observations.  However, if it hasn't, we have a chance!  
