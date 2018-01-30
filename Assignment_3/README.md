@@ -165,7 +165,7 @@ When you invoke `run`, you might see a message like this:
 ```
 
 If this happens, just increase the `N_POOL_LINES` parameter.  Try to do this
-linearly, as a large pool incurs a runtime cost between tests.
+linearly, as there is a runtime cost linear in the pool size between tests.
 
 All previously introduced primitives remain available (some will come in handy),
 and are implemented and documented in `util.h`.
