@@ -291,9 +291,6 @@ void tests_multi() {
             case NB_QUEUE_CORRECTNESS_TEST:
             case NB_QUEUE_TEST:
             case NB_QUEUE_ENQ_TEST:
-              // initialize nb_queue state for each run
-              _CMM_STORE_SHARED(my_nb_queue.head, 0);
-              _CMM_STORE_SHARED(my_nb_queue.tail, 0);
               break;
           }
 
