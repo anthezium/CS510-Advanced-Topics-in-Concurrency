@@ -273,7 +273,7 @@ a variable with a plain name, e.g. `head`, and the untagged version of the same
 pointer is stored in a corresponding variable that ends in `_ptr`, e.g.
 `head_ptr`.
 
-First, head over to `// define types for nb_node and nb_queue` in `worker.c`
+First, head over to `// define types for nb_node and nb_queue` in `tests.h`
 and familiarize yourself with these types.  Next, head over to `// statically
 initialize global data for nb_queue` in `tests.c` and familiarize yourself with
 the initial queue state (it is restored after each test at `// initialize
