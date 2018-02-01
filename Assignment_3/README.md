@@ -359,7 +359,7 @@ did the linking update, and somebody else beat us to the tail-swinging update.
 #### `nb_dequeue()`
 
 Head over to `int nb_dequeue(ti_data_in *d, volatile nb_queue *queue, uint64_t
-*ret);` in `worker.c`.
+*ret)` in `worker.c`.
 
 The basic idea is the same here, and only `queue->head` is pointing to the node
 we're dequeueing, so updating that successfully is sufficient to achieve our
