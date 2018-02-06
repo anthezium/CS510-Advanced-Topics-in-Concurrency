@@ -21,6 +21,7 @@ being serviced on the system.
    Does passing the lock around and busy-waiting for it affect the time it
    takes for all threads to crunch through the set of operations?  If so, is the
    effect different for different numbers of threads?**
+
    Yes, as noted above it takes longer to do the same number of acquisition
    release cycles as we add threads.
    
