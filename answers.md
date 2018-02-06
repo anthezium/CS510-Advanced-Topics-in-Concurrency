@@ -382,13 +382,21 @@ the request and transitioning its copy of `owner` to shared mode.
     like 2 updates total.
 
     Graphs (pairs of 3-hour runs for each number of critical section accesses):
+
     [empty critical section 1](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_01-36-40.csv_ticks_00accesses.pdf "empty critical section")
+
     [empty critical section 2](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_04-33-36.csv_ticks_00accesses.pdf "empty critical section")
+
     [1 word critical section 1](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_01-36-40.csv_ticks_08accesses.pdf "1 word critical section")
+
     [1 word critical section 2](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_04-33-36.csv_ticks_08accesses.pdf "1 word critical section")
+
     [10 word critical section 1](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_01-36-40.csv_ticks_80accesses.pdf "10 word critical section")
+
     [10 word critical section 2](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_04-33-36.csv_ticks_80accesses.pdf "10 word critical section")
+
     [100 word critical section 1](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_01-36-40.csv_ticks_800accesses.pdf "100 word critical section")
+
     [100 word critical section 2](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_04-33-36.csv_ticks_800accesses.pdf "100 word critical section")
 
 
