@@ -381,6 +381,17 @@ the request and transitioning its copy of `owner` to shared mode.
     a line that has changed or will change, then update another line.  Something
     like 2 updates total.
 
+    Graphs (pairs of 3-hour runs for each number of critical section accesses):
+    ![empty critical section](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_01-36-40.csv_ticks_00accesses.pdf "empty critical section")
+    ![empty critical section](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_04-33-36.csv_ticks_00accesses.pdf "empty critical section")
+    ![1 word critical section](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_01-36-40.csv_ticks_08accesses.pdf "1 word critical section")
+    ![1 word critical section](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_04-33-36.csv_ticks_08accesses.pdf "1 word critical section")
+    ![10 word critical section](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_01-36-40.csv_ticks_80accesses.pdf "10 word critical section")
+    ![10 word critical section](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_04-33-36.csv_ticks_80accesses.pdf "10 word critical section")
+    ![100 word critical section](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_01-36-40.csv_ticks_800accesses.pdf "100 word critical section")
+    ![100 word critical section](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/bench_t24_2018-02-05_04-33-36.csv_ticks_800accesses.pdf "100 word critical section")
+
+
 14. **Why do you think Mellor-Crummey and Scott included 3 graphs for tests with
     "empty" critical sections and only 1 with a nonempty ("small") critical
     section?**
