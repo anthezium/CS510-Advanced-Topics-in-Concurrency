@@ -21,10 +21,10 @@ being serviced on the system.
    Does passing the lock around and busy-waiting for it affect the time it
    takes for all threads to crunch through the set of operations?  If so, is the
    effect different for different numbers of threads?**
-Yes, as noted above it takes longer to do the same number of acquisition
-release cycles as we add threads.
-
-Here's a probabilistic argument:
+   Yes, as noted above it takes longer to do the same number of acquisition
+   release cycles as we add threads.
+   
+   Here's a probabilistic argument:
     1. A critical section that has no work still involves one memory access,
        namely the store of the unlocked value to the lock when it completes.
 This can be a cache hit or a cache miss depending on whether other threads have
