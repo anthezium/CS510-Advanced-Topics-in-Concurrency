@@ -355,6 +355,7 @@ the request and transitioning its copy of `owner` to shared mode.
     predecessor to invalidate this line, and then a read response from the
     predecessor to provide the new value.
         * `mcs_nosharing_unlock()`:
+
             1. Read `local_lock->next`, which may be retained in exclusive or
                shared mode from the preceding `mcs_nosharing_lock()` call.  If not,
     a read request and response round trip is needed here.
@@ -371,7 +372,7 @@ the request and transitioning its copy of `owner` to shared mode.
     line, so an invalidation round trip followed by a read request and response
     round trip is required.
     
-        To summarize, there are three paths: 
+            To summarize, there are three paths: 
 
             1. A successor initially exists: here we read a cache line (which may
                be hot) and update another. 1 update total.
