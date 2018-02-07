@@ -540,3 +540,5 @@ the request and transitioning its copy of `owner` to shared mode.
    since we can't link anything after our dummy because `queue->tail` doesn't
    point to it, so the attempt to dereference it would result in a segmentation
    fault.
+
+Copyright Ted Cooper, February 2018
