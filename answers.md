@@ -429,3 +429,112 @@ the request and transitioning its copy of `owner` to shared mode.
     `global_lock->next`), but the usurpers' critical sections will run before our
     unlinked tail's critical sections, since they precede them in the queue after
     we patch it up.
+
+`Assignment_3`:
+1. **Can an enqueuer and dequeuer concurrently proceed in this implementation?
+   Why or why not?**
+
+   No, because both `coarse_enqueue()` and `coarse_dequeue()` acquire and hold the
+   queue lock for the duration of the critical section.
+
+2. **Can an enqueuer and dequeuer concurrently proceed in this implementation?**
+
+   Yes, although there is contention between them in one corner case.  Whenever
+   the queue is nonempty, `nb_enqueue()` exclusively updates `queue->tail` and the
+   `next` pointer of the old tail node, while `nb_dequeue` exclusively updates
+   `queue->head`.  These updates are accomplished using `lockcmpxchgq()` and are
+   to distinct cache lines, so they can proceed concurrently without conflicts.
+   If the queue is empty, and an `nb_enqueue()` has updated the `next` pointer of
+   the dummy node but not yet updated `queue->tail`, `nb_dequeue()`'s helping
+   update to swing `queue->tail` may conflict with the `nb_enqueue()`'s attempt to
+   do the same thing.  This may slow things down, but it won't prevent progress,
+   since one of the conflicting updates must succeed, and both algorithms proceed
+   regardless of whether the swinging update succeeds or fails.
+
+3. **How does `nb_queue` compare to `coarse_queue` (i.e. for a mixed workload)?**
+
+   `nb_queue` handily beats `coarse_queue` for the mixed workload.
+
+4. **How does `nb_queue_enq` compare to `coarse_queue_enq` (i.e. for a workload
+   of only enqueues)?**
+
+   They are roughly the same, with `nb_queue_enq` losing by a slight margin more
+   often than not.
+
+5. **What primitives does `nb_enqueue()` use to make updates on a best-case
+   enqueue?  What about `coarse_enqueue()`?**
+
+    * `nb_enqueue()`:  Two `lockcmpxchgq()`s, the first to update `next` to link in
+    the new tail, the second to point `queue->tail` at it.
+    * `coarse_enqueue()`: One `lockcmpxchgq()` to acquire the queue lock, some
+    uncontended `_CMM_STORE_SHARED()`s to update the queue and node state, and
+    one `_CMM_STORE_SHARED()` to release the lock that contends with concurrent
+    reads or updates to the lock, depending on the lock implementation.
+
+6. **Do the implementations compare in the same way for both kinds of workloads?
+   Why or why not?**
+
+   The implementations compare very differently for both kinds of workloads.
+   Basically, `nb_queue` (mixed workload) handily beats the others, the remaining
+   3 of which are pretty close.  This is because enqueues and dequeues can proceed
+   concurrently in `nb_queue`, so we can get more work done in the same amount of
+   time, but we need to have a mix of enqueues and dequeues to benefit from this
+   property.  That's why `nb_queue_enq` is up there with `coarse_queue` and
+   `coarse_queue_enq`, they're all chugging along one update at a time.  The point
+   here is to illustrate the benefit of disjoint access parallelism in a
+   minimalistic scenario: even if there we can just do two things in parallel
+   (because they touch different data), it is a significant improvement over
+   one-thing-at-a-time.
+
+7. **Where would the ABA problem break this operation?  What could go wrong as
+   a result?**
+
+   Here is one example in which the ABA problem breaks this operation.  It is probably
+   not the only example.
+
+   Summary: An attempt to swing tail by a slow dequeue will succeed if
+   `queue->tail` currently points to the same location it did when that dequeue
+   started. Lets call this location `X`. This can happen either when no other
+   concurrent operation succeeded in swinging the tail (this is the desirable
+   situation), or when a series of other concurrent operations succeeded in
+   enqueueing and dequeueing elements in such a way that led to `X` being freed,
+   reallocated as an element in the same queue, and `queue->tail` pointed to it
+   again. In this case, it might actually be the last element in the queue, in
+   which case `queue->tail` does not need swinging, or it might not, but in either
+   case the original dequeue's attempt to swing the tail will succeed, and will
+   point `queue->tail` somewhere else. Specifically, it will point it to wherever
+   the original successor of `queue->head` was when it read that at its start.
+   This could be a freed dummy node, for example.
+   
+   Detailed explanation: The line `lockcmpxchgq(&queue->tail, tail, next)` (the
+   helping update in `nb_dequeue`) assumes that if `queue->tail` is still `tail`,
+   it's safe to make `next` the new tail.  Recall that we hit this line when we
+   have observed `head == tail` (the queue is empty), but also observed that
+   `next` is nonzero.  This means that a concurrent enqueuer has added a new node
+   (`next`) to the queue, but has yet to update `queue->tail` to point to it.
+   Let's say that between our observations at the top of the loop and this line, 
+       1. the concurrent enqueuer completes, pointing `queue->tail` to `next` (our
+          old `tail` is the dummy).  Now the queue is in a good state (`queue->tail`
+   points to the last node in the list).
+       2. a dequeuer comes along and completes, dequeueing `next` and freeing
+          `tail`.
+       3. an enqueuer comes along, happens to reallocate the memory for `tail`,
+          and completes, among other things pointing `queue->tail` to it.
+       4. a dequeuer comes along and completes, freeing `next`.  (Now
+          `queue->head` and `queue->tail` point to the reincarnation of `tail`,
+   the new dummy, not that this is relevant).  
+   We wake back up, and (without the tag in the low bits), see the same pointer
+   to `tail` that we originally observed in `queue->tail`.  Our `lockcmpxchgq()`
+   succeeds, and we end up pointing `queue->tail` to `next`, which is now freed
+   memory.
+
+   ![explanation](https://github.com/anthezium/CS510-Advanced-Topics-in-Concurrency/raw/master/answers_data/20180205_214850.jpg "explanation")
+   
+   Many strange things could happen at this point.  For example, a concurrent
+   enqueuer could come along and merrily add things to our phantom tail (it never
+   checks `queue->head`) that will never be dequeued.  A dequeuer who comes along
+   will observe that `queue->head != queue->tail`, and try to copy
+   `queue->head->next->val` into `*ret`, but `queue->head->next` will be `0`,
+   since we can't link anything after our dummy because `queue->tail` doesn't
+   point to it, so the attempt to dereference it would result in a segmentation
+   fault.
