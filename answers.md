@@ -369,9 +369,10 @@ the request and transitioning its copy of `owner` to shared mode.
             4. If there was a successor initally or one concurrently added, updates
                `succ_lock->locked`.  The successor is probably spinning on this
     line, so an invalidation round trip followed by a read request and response
-    round trip is required. STOPPED HERE.  Need to convert everything to counting round trips?
+    round trip is required.
     
         To summarize, there are three paths: 
+
             1. A successor initially exists: here we read a cache line (which may
                be hot) and update another. 1 update total.
             2. No successor initially exists or is concurrently added: we read that
