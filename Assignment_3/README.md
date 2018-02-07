@@ -458,7 +458,7 @@ not the other two kinds we usually see.
 3. How does `nb_queue` compare to `coarse_queue` (i.e. for a mixed workload)?
 4. How does `nb_queue_enq` compare to `coarse_queue_enq` (i.e. for a workload
    of only enqueues)? 
-5. What primitives does `nb_enqueue()` use to make updates on a best-case
+5. What primitives (and how many calls to each) does `nb_enqueue()` use to make updates on a best-case
    enqueue?  What about `coarse_enqueue()`?
 6. Do the implementations compare in the same way for both kinds of workloads?
    Why or why not?
