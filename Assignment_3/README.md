@@ -119,8 +119,15 @@ a node pointer, we can keep some other stuff in those 6 bottom bits.
 2. If we put something different in those bits every time we reuse the node, we'll
 never have the same "pointer" for subsequent incarnations, so `lockcmpxchgq()` will fail
 when things have changed under us, so we avoid the ABA problem.
-3. We can represent `2^6 = 64` distinct values in those 6 bits, so we can use each
-cache line 64 times before resorting to other tricks to prevent the ABA problem.
+3. We can represent `2^6 = 64` distinct values in those 6 bits, so we can use
+   each cache line 64 times before resorting to other tricks (that won't come
+up until we study hazard pointers and RCU) to prevent the ABA problem.  We
+enforce this by guaranteeing that when `pool_allocate()` (below) reuses a cache
+line that has been freed, it gives us back a new value in the 6 bottom bits
+every time.  Once a cache line has been reused 64 times and we've exhaused all
+distinct values those 6 bits can have, `pool_allocate()` never gives us back
+that cache line again, since there is no longer a tagged version of the pointer
+that we haven't used before.
 
 This scheme is built into the memory allocator, which exposes two functions and
 a macro for you to use:

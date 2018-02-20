@@ -108,6 +108,7 @@ For the Linux-Kernel Memory Model (see `linux-kernel.cat`):
    from an event to itself (i.e. it checks that the relation is irreflexive).
    We won't be using any of the events that build this relation in this
    assignment.
+
 For the remaining wirings for a litmus test, herd checks whether the
 postcondition holds.  herd can check postconditions formulated using the
 following quantifiers:
