@@ -1,0 +1,3 @@
+#!/bin/bash
+
+herd7 -conf linux-kernel.cfg "$1"

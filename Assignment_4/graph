@@ -1,0 +1,10 @@
+#!/bin/bash
+
+LITMUS="$1"
+BNAME=$(basename "$LITMUS")
+NAME="${BNAME%.litmus}"
+DOT="${NAME}.dot"
+PDF="${NAME}.pdf"
+
+herd7 -conf linux-kernel.cfg -show prop -o dot "$LITMUS"
+dot -Tpdf "dot/$DOT" -o "pdf/$PDF"
