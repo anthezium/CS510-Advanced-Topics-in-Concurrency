@@ -14,20 +14,33 @@ and summarized by
 We're looking at this model to get a better understanding of how memory
 accesses and barriers work in a cross-platform setting, and get some practice
 visualizing the happens-before relation (and others) to explain which behaviors
-are allowed and which are not.
+are allowed and which are not.  Remember that one consequence of developing a
+cross-platform memory model is that if some behavior (such as reordering
+particular memory accesses relative to one-another) is allowed by any
+architecture that runs Linux, it must be allowed by the memory model, even if
+other architectures that run Linux don't allow that behavior.  As a result,
+we'll have to reason about the code we see in this assignment in keeping with a
+different set of rules that we've been using to reason about the code we've
+written in previous assignments to run on `x86_64`, which allows comparatively
+fewer reorderings than most architectures that run Linux.
+Take a look at 
+[this table](https://en.wikipedia.org/wiki/Memory_ordering#In_symmetric_multiprocessing_(SMP)_microprocessor_systems)
+to get an idea of what reorderings happen on modern architectures, and just how
+conservative in this respect `x86_64` (listed as `AMD64`) is compared to an
+architecture like `POWER` or `ARMv7`, both of which also run Linux.
 
 The series of steps in this assignment build on one-another only conceptually,
-so you can complete the implementations in any order to get things working
-(just compare both of them once you're done).  There are
-numbered questions throughout the assignment; we recommend thinking through
-these questions carefully and writing down short concrete answers before moving
-on to the next section.  If you're confused by a question or don't know where
-to start, you're free to discuss or puzzle through them with other students,
-and Ted and Jon are also available to help.  The point of these assignments is
-to develop your understanding of the material and give you some hands-on
-intuition for concurrent programming, and the questions are there to help you
-understand what's going on.  If they don't, we'd really like to know, so we can
-write some better ones :)
+so you can complete the implementations in any order to get things working,
+although it may be confusing to go out of order.  There are numbered questions
+throughout the assignment; we recommend thinking through these questions
+carefully and writing down short concrete answers before moving on to the next
+section.  If you're confused by a question or don't know where to start, you're
+free to discuss or puzzle through them with other students, and Ted and Jon are
+also available to help.  The point of these assignments is to develop your
+understanding of the material and give you some hands-on intuition for
+concurrent programming, and the questions are there to help you understand
+what's going on.  If they don't, we'd really like to know, so we can write some
+better ones :)
 
 Finally, this assignment is brand new, so there may be gaps in the
 documentation and bugs in the code.  Let us know about any issues you find and
@@ -444,7 +457,138 @@ both perspectives are consistent with `x` having taken on `0`, `2`, and then
 both perspectives are consistent with `x` having taken on `0`, `1`, `2`, and
 (alternatively) with `x` having taken on `0`, `2`, `1`.
 
-#### Two variables, one writer, two readers: 
+#### Two variables, one writer, one reader: `MP+wx-wy+ry-rx1`
 
+First, let's show that when we have one thread writing to two
+different variables (`x` and `y`), another can observe these writes
+in either order:
+
+```
+C MP+wx-wy+ry-rx1
+
+{}
+
+P0(int *x, int *y)
+{
+	WRITE_ONCE(*x, 1);
+	WRITE_ONCE(*y, 1);
+}
+
+P1(int *x, int *y)
+{
+	int r0;
+	int r1;
+
+	r0 = READ_ONCE(*y);
+	r1 = READ_ONCE(*x);
+}
+
+exists (1:r0=0 /\ 1:r1=1)
+```
+
+```bash
+./graph litmus-tests/MP+wx-wy+ry-rx1.litmus
+```
+
+Here, we see the write to `y` happen first from `P1`'s perspective.
+
+Well, can we see the write to `x` happen first?  Here's the same code,
+with the postcondition
+
+```
+exists (1:r0=1 /\ 1:r1=0)
+```
+
+```bash
+./graph litmus-tests/MP+wx-wy+ry-rx2.litmus
+```
+
+This also corresponds to a valid wiring.  Take a look at the graph
+(`pdf/MP+wx-wy+ry-rx2.pdf`) to note our first benign cycle.  Note that the
+cycle includes `po` (program) edges between reads, while the `hb` relation in
+`linux-kernel.cat` (which the model requires to be acyclic) only includes `ppo`
+(preserved program order) edges.  Review the `THE PRESERVED PROGRAM ORDER RELATION` section
+in
+[Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt)
+to get some clarity on the distinction between `po` and `ppo`.
+
+##### Questions
+1.  Are the `po` edges we see in the graph in `ppo`?  Why or why not?
+2.  From an operational perspective, your answer to 1 amounts to a statement
+    about whether adjacent loads of different variables can be reordered in
+this memory model.  What is that statement?
+3.  Is your answer to 2 true for all architectures supported by the memory
+    model?  If not, give an example of a supported architecture where it is
+true, and a supported architecture where it is false.
+
+So, we've established that an observer can see these writes in either order.
+What if we don't want that?
+
+##### Making this program deterministic
+
+What if we want a guarantee that the observer will see the write to `x`
+happening before the write to `y`?  This could be useful if, for instance, the
+first write populated a field in a struct, and the second write published a
+pointer to that struct.  If another thread could observe the new pointer but
+miss the field update, that thread could see the struct in a
+not-yet-initialized state, possibly resulting in an error.  To avoid that, we
+need to make sure the first write is always visible to anyone observing the
+second write.  This is an example of the message passing paradigm, where the
+first write establishes a message payload, and the second write shares that
+payload with observers.  Because the writes are related at this semantic level,
+it makes sense for us to guarantee that they are only observed in an order that
+fulfills the semantics we need.  We can make this happen, we just need to
+include some explicit guidance, so the machine knows that it's what we want.
+
+Recall a couple of definitions from 
+[Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt):
+
+```
+smp_rmb() forces the CPU to execute all po-earlier loads
+before any po-later loads;
+
+smp_wmb() forces the CPU to execute all po-earlier stores
+before any po-later stores;
+
+...
+
+When a fence instruction is executed on CPU C: 
+For each other CPU C', smb_wmb() forces all po-earlier stores
+on C to propagate to C' before any po-later stores do.
+```
+
+Use these barriers, and the rest of what you know from 
+[Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt)
+to modify the program to guarantee that the following postcondition always holds:
+
+```
+forall ((1:r0=0 /\ 1:r1=0) \/ (1:r0=0 /\ 1:r1=1) \/ (1:r0=1 /\ 1:r1=1))
+```
+
+All this says is that if the write to `y` is not observed, then the write to
+`x` may or may not be observed, but if the write to `y` is observed, then the
+write to `x` must be observed too.
+
+To be clear, we're looking for output with `Ok` that shows that the condition
+`Always` holds.
+
+##### Questions
+4.  What barrier(s) did you have to add (and where) to make this work?
+5.  For each barrier you added, explain why it was necessary to do so, and
+what would happen if you hadn't.
+6.  If two writes to different variables propagate to a CPU in some order, does
+that guarantee that the CPU will observe them in that order?
+
+#### Two variables, one writer, two readers: `MP+wx-wy+ry-rx+ry-rx1`
+
+Let's add an observer and go back to the drawing board.  Since one observer can
+see the writes happen in either order, it stands to reason that this will also
+be the case for two observers.  A separate question is whether the observers
+will always agree on the order of writes.  In `CO+wx+wx+rx-rx+rx-rx1` above, we
+saw that when the writes are to the same variable, observers always agree.
+What about when they're to different variables?  Let's set up a program, and
+see if we can get observers to disagree.
+
+Check out 
 
 Copyright Ted Cooper, February 2018
