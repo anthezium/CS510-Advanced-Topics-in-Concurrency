@@ -524,7 +524,7 @@ true, and a supported architecture where it is false.
 So, we've established that an observer can see these writes in either order.
 What if we don't want that?
 
-##### Making this program deterministic
+##### Making the write to `x` happen before the write to `y`
 
 What if we want a guarantee that the observer will see the write to `x`
 happening before the write to `y`?  This could be useful if, for instance, the
@@ -579,6 +579,31 @@ what would happen if you hadn't.
 6.  If two writes to different variables propagate to a CPU in some order, does
 that guarantee that the CPU will observe them in that order?
 
+##### Why are other wirings ruled out?
+
+Change the postcondition back to the first one we checked (where the write to
+`y` is observed first)
+
+```
+exists (1:r0=0 /\ 1:r1=1)
+```
+
+but keep the barriers as they are.  Now, we can use the `failgraph` script,
+which (in some situations) generates a graph for a wiring that fails the
+postcondition.  It works in this case, and generates our first graph with a 
+cycle that isn't allowed by the memory model.  
+
+```bash
+./failgraph litmus-tests/MP+wx-wy+ry-rx2.litmus
+```
+
+Take a look at the graph, and answer the following:
+
+##### Questions
+7.  We see a series of edges in this graph where you have two accesses
+    separated in program order by a barrier.  Are these accesses in `ppo`?  Why
+    or why not?
+
 #### Two variables, one writer, two readers: `MP+wx-wy+ry-rx+ry-rx1`
 
 Let's add an observer and go back to the drawing board.  Since one observer can
@@ -586,9 +611,78 @@ see the writes happen in either order, it stands to reason that this will also
 be the case for two observers.  A separate question is whether the observers
 will always agree on the order of writes.  In `CO+wx+wx+rx-rx+rx-rx1` above, we
 saw that when the writes are to the same variable, observers always agree.
-What about when they're to different variables?  Let's set up a program, and
-see if we can get observers to disagree.
+What about when they're to different variables?  Let's set up a program to test
+this, and see if we can get observers to disagree.
 
-Check out 
+Check out `litmus-tests/MP+wx-wy+ry-rx+ry-rx1.litmus`:
+
+```
+C MP+wx-wy+ry-rmb-rx+ry-rmb-rx1
+
+{}
+
+P0(int *x, int *y)
+{
+	WRITE_ONCE(*x, 1);
+	WRITE_ONCE(*y, 1);
+}
+
+P1(int *x, int *y)
+{
+	int r0;
+	int r1;
+
+	r0 = READ_ONCE(*y);
+	r1 = READ_ONCE(*x);
+}
+
+P2(int *x, int *y)
+{
+	int r2;
+	int r3;
+
+	r2 = READ_ONCE(*y);
+	r3 = READ_ONCE(*x);
+}
+
+exists (1:r0=1 /\ 1:r1=0 /\ 2:r2=0 /\ 2:r3=1)
+```
+
+Here we're checking whether `P1` can observe the write to `y` first, while `P2`
+observes the write to `x` first.  Let's run the check, and if it passes generate a graph:
+
+```bash
+./graph litmus-tests/MP+wx-wy+ry-rx+ry-rx1.litmus
+```
+
+Unsurprisingly, this case does in fact occur, and a graph illustrating its
+corresponding wiring is generated.  There are a couple of related things to
+note in the graph.  One is that we have another benign cycle, that is once
+again allowed because it depends on program order edges that are not preserved,
+since they're connecting accesses to independent variables and there aren't
+barriers guaranteeing that they are preserved.   Another is that `rf` and `fr`
+edges connect `P0`'s writes to `P1`'s reads in basically the opposite way that
+they connect `P0`'s writes to `P2`'s reads, and that this is what creates the
+benign cycle we just noted.
+
+Again, let's fix this.  Use barriers (more or less as before), to guarantee
+that both threads see the write to `x` happen first.  Use this postcondition
+to check your work:
+
+```
+~exists ((1:r0=1 /\ 1:r1=0) \/ (2:r2=1 /\ 2:r3=0))
+```
+
+This postcondition guarantees that neither thread observes `y` at 1 and `x` at 0.
+If neither thread observes the writes out of order, it follows that both threads
+observe the writes in the same order.
+
+##### Questions
+8. What barriers did you have to add, and where?
+9. Use the original postcondition 
+   `exists (1:r0=1 /\ 1:r1=0 /\ 2:r2=0 /\ 2:r3=1)` 
+   and `failgraph` to inspect a case ruled out by the memory model
+   where `P1` sees the write to `y` but misses the write to `x`.  Where is the
+   cycle?  Why does the memory model rule it out?
 
 Copyright Ted Cooper, February 2018

@@ -9,4 +9,5 @@ DOT="${NAME}.dot"
 PDF="${NAME}.pdf"
 
 herd7 -conf linux-kernel.cfg -show prop -through all -o dot "$LITMUS"
+#herd7 -conf linux-kernel.cfg -show prop -skipcheck happens-before -o dot "$LITMUS"
 dot -Tpdf "dot/$DOT" -o "pdf/$PDF"
