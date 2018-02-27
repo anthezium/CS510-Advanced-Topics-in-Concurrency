@@ -163,6 +163,7 @@ cd herdtools7
 git checkout 44d69c2b1b5ca0f97bd138899d31532ee5e4e084
 make all
 make install
+export PATH="$HOME/bin:$PATH"
 ```
 
 ## Exploring Litmus Tests
