@@ -141,6 +141,30 @@ programmers a better understanding of how to write concurrent code using the
 model.  The tests below will develop our intuition about when writes appear to
 be ordered and when they don't.
 
+### Using herd 
+
+Babbage has all of the ocaml jazz we need to build and use herd, we just need
+to get the tool itself up and running.
+
+I have built a version of herd that works with the memory model in my home directory.
+You can set up your shell to use it as follows:
+
+```bash
+export PATH="/u/theod/bin:$PATH"
+```
+
+If you have issues getting this to work, or prefer to build your own copy in
+your home directory, you can do it like so:
+
+```bash
+cd ~/git
+git clone https://github.com/herd/herdtools7.git
+cd herdtools7
+git checkout 44d69c2b1b5ca0f97bd138899d31532ee5e4e084
+make all
+make install
+```
+
 ## Exploring Litmus Tests
 
 ### Coherence Order
@@ -707,12 +731,12 @@ threads observe the writes in the same order.  Write the new test to
 ```
 
 ##### Questions
-8. What barriers did you have to add, and where?
-9. Use the original postcondition 
-   `exists (1:r0=1 /\ 1:r1=0 /\ 2:r2=0 /\ 2:r3=1)` 
-   and `failgraph` to inspect a case ruled out by the memory model
-   where `P1` sees the write to `y` but misses the write to `x`.  Where is the
-   cycle?  Why does the memory model rule it out?
+9.  What barriers did you have to add, and where?
+10. Use the original postcondition 
+    `exists (1:r0=1 /\ 1:r1=0 /\ 2:r2=0 /\ 2:r3=1)` 
+    and `failgraph` to inspect a case ruled out by the memory model
+    where `P1` sees the write to `y` but misses the write to `x`.  Where is the
+    cycle?  Why does the memory model rule it out?
 
 ##### Which check failed?
 
@@ -864,5 +888,31 @@ are more detailed definitions of *A-* and *B-cumulativity* in
 [Alglave et al 2017 (A Strong Formal Model of Linux-Kernel Memory Ordering
 )](https://www.kernel.org/pub/linux/kernel/people/paulmck/LWNLinuxMM/StrongModel.html).
 
+In that section, Stern points out that `smb_store_release()` *is* A-cumulative.
+Modify `P2` to use this for its store (the first parameter is a pointer, not an
+int lvalue as in `WRITE_ONCE()`, the second parameter is the value to store).
+Write this version to `litmus-tests/IRIW+ry-rx+wx+wy+ry-rx3.litmus`.
+
+Confirm that we can no longer observe the writes out of order:
+
+```bash
+./check litmus-tests/IRIW+ry-rx+wx+wy+ry-rx3.litmus
+```
+
+Next, generate a graph for an invalid wiring that satisfies the condition:
+
+```bash
+./failgraph litmus-tests/IRIW+ry-rx+wx+wy+ry-rx3.litmus
+```
+
+##### Questions
+11. Where is the cycle?  What has changed in the graph to make it appear?
+12. BONUS:  There is at least one other way, using the tools Stern introduces,
+    to make this postcondition fail (without using `smp_store_release()`).
+    Find one, and explain it.
+13. Broadly, what (beyond program order) does it take: 
+    1. to order two writes to the same variable by the same CPU?
+    2. to order two writes to different variables by the same CPU?
+    3. to order two writes to different variables by different CPUs?
 
 Copyright Ted Cooper, February 2018
