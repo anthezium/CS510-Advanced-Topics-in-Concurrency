@@ -1,6 +1,6 @@
 # Assignment 4: The Linux-Kernel Memory Model
 
-**Due Date: 4:19pm on Thursday, February 22nd**
+**Due Date: 4:19pm on Thursday, March 4th**
 
 ## Overview
 
@@ -490,9 +490,9 @@ exists (1:r0=0 /\ 1:r1=1)
 ./graph litmus-tests/MP+wx-wy+ry-rx1.litmus
 ```
 
-Here, we see the write to `y` happen first from `P1`'s perspective.
+Here, we see the write to `x` happen first from `P1`'s perspective.
 
-Well, can we see the write to `x` happen first?  Here's the same code,
+Well, can we see the write to `y` happen first?  Here's the same code,
 with the postcondition
 
 ```
@@ -582,19 +582,20 @@ that guarantee that the CPU will observe them in that order?
 ##### Why are other wirings ruled out?
 
 Change the postcondition back to the first one we checked (where the write to
-`y` is observed first)
+`y` is observed first) and 
 
 ```
-exists (1:r0=0 /\ 1:r1=1)
+exists (1:r0=1 /\ 1:r1=0)
 ```
 
-but keep the barriers as they are.  Now, we can use the `failgraph` script,
+but keep the barriers as they are.  Save this version of the file as
+`litmus-tests/MP+wx-wy+ry-rx3.litmus`.  Now, we can use the `failgraph` script,
 which (in some situations) generates a graph for a wiring that fails the
-postcondition.  It works in this case, and generates our first graph with a 
+postcondition.  It works in this case, and generates our first graph with a
 cycle that isn't allowed by the memory model.  
 
 ```bash
-./failgraph litmus-tests/MP+wx-wy+ry-rx2.litmus
+./failgraph litmus-tests/MP+wx-wy+ry-rx3.litmus
 ```
 
 Take a look at the graph, and answer the following:
@@ -603,6 +604,29 @@ Take a look at the graph, and answer the following:
 7.  We see a series of edges in this graph where you have two accesses
     separated in program order by a barrier.  Are these accesses in `ppo`?  Why
     or why not?
+8.  It's clear that there's a happens before cycle between `P1`'s reads, but
+    it may not be obvious why it's there.  Let's track it down:
+    1. Consider the `fr` edge from `P1`'s read of `x` at 0 to `P0`'s write to
+       `x` of 1.  Has the write propagated to `P1` when the read observes `x`?
+    2. Tell herd to show us edges in the `prop-irrefl` and `prop-local`
+       relations by editing `linux-kernel.cfg` and adding them to the list on
+       the line starting with `doshow`.  A `prop-local` edge  exists when a chain of 
+       one or more `prop-irrefl` edges (which can span CPUs) ends up linking two
+       events on the same CPU.  Every `prop-local` edge is also a `hb` edge,
+       so we can use the acylicity of happens before to maintain consistency
+       with a variable's coherence order as the variable takes on new values 
+       concurrently with local accesses to it.
+       ([Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt)
+       elaborates on this, calling our `prop-local` `prop`, in `THE
+       HAPPENS-BEFORE RELATION` section).  
+       Looking at the new graph, why does `d` happen before `c`?  
+    3. Why does `c` happen before `d`?
+
+##### Keeping things readable
+
+If the graphs get overwhelming to look at, turning off edges you aren't
+interested in in `linux-kernel.cfg`.  Similarly, if there are edges in the model
+that you'd like to see, turn them on.
 
 #### Two variables, one writer, two readers: `MP+wx-wy+ry-rx+ry-rx1`
 
@@ -673,9 +697,14 @@ to check your work:
 ~exists ((1:r0=1 /\ 1:r1=0) \/ (2:r2=1 /\ 2:r3=0))
 ```
 
-This postcondition guarantees that neither thread observes `y` at 1 and `x` at 0.
-If neither thread observes the writes out of order, it follows that both threads
-observe the writes in the same order.
+This postcondition guarantees that neither thread observes `y` at 1 and `x` at
+0.  If neither thread observes the writes out of order, it follows that both
+threads observe the writes in the same order.  Write the new test to
+`litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus` and check it:
+
+```bash
+./check litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus
+```
 
 ##### Questions
 8. What barriers did you have to add, and where?
@@ -684,5 +713,156 @@ observe the writes in the same order.
    and `failgraph` to inspect a case ruled out by the memory model
    where `P1` sees the write to `y` but misses the write to `x`.  Where is the
    cycle?  Why does the memory model rule it out?
+
+##### Which check failed?
+
+I haven't found a way to make herd print which cycle check failed for a
+particular ruled out wiring.  However, it does provide a way to skip specified
+checks in the memory model, and when we have a postcondition that only
+corresponds to wirings that fail the checks, we can figure out which check(s)
+some wiring that satisfies it is failing by disabling subsets of checks
+one-by-one until it stops failing.  For example, to skip the memory model's
+`happens-before` check on a litmus test, you can use the following incantation:
+
+```bash
+herd7 -conf linux-kernel.cfg -skipcheck happens-before litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus 
+```
+
+You can disable multiple checks as follows:
+
+```bash
+herd7 -conf linux-kernel.cfg -skipchecks happens-before,propagation,coherence,rcu litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus
+```
+
+If you'd like to guarantee that exactly the specified check(s) fail (and all
+others pass), set the `strictskip` flag.  So, to check whether *only* happens-before fails:
+
+```bash
+herd7 -conf linux-kernel.cfg -skipcheck happens-before -strictskip true litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus 
+```
+
+Note that this doesn't work for some of the coherence order failures we saw
+early in this assigment.
+
+#### Two variables, two writers, two readers: `IRIW+wx+wy+ry-rx+ry-rx1`
+
+Now, let's separate the writes to `x` and `y` into separate threads, and see
+what it takes to create an ordering between them.  First, we once again confirm
+that the observers (`P0` and `P3` this time around) can disagree on the order
+of writes:
+
+```
+C IRIW+ry-rx+wx+wy+ry-rx1
+
+{}
+
+P0(int *x, int *y)
+{
+	int r0;
+	int r1;
+
+	r0 = READ_ONCE(*y);
+	r1 = READ_ONCE(*x);
+}
+
+P1(int *x)
+{
+	WRITE_ONCE(*x, 1);
+}
+
+P2(int *y)
+{
+	WRITE_ONCE(*y, 1);
+}
+
+P3(int *x, int *y)
+{
+	int r2;
+	int r3;
+
+	r2 = READ_ONCE(*y);
+	r3 = READ_ONCE(*x);
+}
+
+exists (0:r0=0 /\ 0:r1=1 /\ 3:r2=1 /\ 3:r3=0)
+```
+
+```bash
+./graph litmus-tests/IRIW+ry-rx+wx+wy+ry-rx1.litmus
+```
+
+Unsurprisingly, the postcondition holds.  Check out the graph, noting a similar
+benign cycle to those we've seen before.  Add read barriers and generate a new
+graph, just to illustrate that there doesn't even need to be a cycle (benign or
+otherwise) to create this outcome. 
+
+Next, let's try and recreate the situation we had in the last example, where
+everyone agrees that the write to `x` happens before the write to `y`.  We
+can't put an `smp_wmb()` in between the writes anymore, since they're in
+different threads now.  Besides, we know from the end of `AN OPERATIONAL MODEL`
+in 
+[Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt)
+that `smp_wmb()` only orders writes local to the CPU that executes it; it does
+not guarantee that a write from another CPU observed before `smp_wmb()` will
+propagate to other CPUs before a local write after `smp_wmb()` propagates to
+them.
+
+One thing we can do that seems like it might work is to make `P2` read `x`, and
+write whatever value it observes `x` having to `y`.  In other words, we're
+creating a data dependency from `P2`'s read of `x` to its write to `y`.  Copy
+the value read from `x` into a register (which you'll need to declare), then
+store that to `y` (instead of 1).  If `P2` sees the write to `x`, then *surely*
+that write is visible to other threads, too.  You'll need to add another
+parameter `int *x` to `P2`'s signature.  Write this new test to
+`litmus-tests/IRIW+ry-rx+wx+wy+ry-rx2.litmus`.  Let's check that this creates
+an ordering between the updates to `x` and `y`:
+
+```bash
+./check litmus-tests/IRIW+ry-rx+wx+wy+ry-rx2.litmus
+```
+
+Wait, what?  We know that `P2` observed `P1`'s write to `x` because `P3`
+observed `y` at 1, but then (in `ppo`) `P3` missed `P1`'s write to `x`,
+observing `x` at 0.  How is this possible?  First, let's add the following to
+`linux-kernel.cfg` to produce a more readable graph, where the `rmb` events are
+removed (there are still `ppo` edges where they were):
+
+```
+unshow po
+showevents mem
+```
+
+Generate the graph to see this madness in action:
+
+```bash
+./graph litmus-tests/IRIW+ry-rx+wx+wy+ry-rx2.litmus
+```
+
+Well, at least the `data` dependency is there.  Trace the `hb` edges, and note
+that there is no cycle.  Also note that if there were a `prop-irrefl` edge from
+`d` to `e`, we'd have a `prop-local` edge from `g` to `f` (and thus an `hb`
+edge and an `hb` cycle).  At a high level, this is an expression of the fact
+that a `data` dependency, even though it gives us `ppo`, does not ensure that the
+write we read from is propagated to other CPUs before the write that depends on
+the read!  In this example, it means that it's perfectly acceptable for `P3` to
+see the value of `y` that came from `P1`'s update to `x` without seeing that
+same update to `x`.  
+
+Intuitively, this does make a certain amount of sense: Just because a write has
+propagated to our CPU, should we be able to depend on it having propagated to
+all other CPUs?  In previous examples with two variables and one writer, we
+only had to ensure that a single writer's writes were propagated in order.
+Now, we have to ensure that a write from some *other* CPU is fully propagated
+before our write.  This may involve some amount of waiting to hear back from
+other CPUs, so rather than make it the default behavior, many architectures
+provide special barriers and memory accesses for this purpose.
+[Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt)
+talks about this at the end of `AN OPERATIONAL MODEL`, drawing the distinction
+between events that are *A-cumulative* (requiring writes that have previously
+propagated to this CPU to propagate to all CPUs) and those that are not.  There
+are more detailed definitions of *A-* and *B-cumulativity* in 
+[Alglave et al 2017 (A Strong Formal Model of Linux-Kernel Memory Ordering
+)](https://www.kernel.org/pub/linux/kernel/people/paulmck/LWNLinuxMM/StrongModel.html).
+
 
 Copyright Ted Cooper, February 2018

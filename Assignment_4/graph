@@ -5,6 +5,15 @@ BNAME=$(basename "$LITMUS")
 NAME="${BNAME%.litmus}"
 DOT="${NAME}.dot"
 PDF="${NAME}.pdf"
+PDOT="dot/$DOT"
+PPDF="pdf/$PDF"
 
-herd7 -conf linux-kernel.cfg -show prop -o dot "$LITMUS"
-dot -Tpdf "dot/$DOT" -o "pdf/$PDF"
+mkdir -p dot pdf
+rm -f "$PDOT"
+herd7 -conf linux-kernel.cfg -o dot "$LITMUS"
+if [ -s "$PDOT" ]; then
+  dot -Tpdf "$PDOT" -o "$PPDF"
+  echo "generated $PPDF"
+else
+  echo "graph generation failed"
+fi

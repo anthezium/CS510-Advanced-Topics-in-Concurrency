@@ -71,12 +71,14 @@ let ppo = rrdep* ; (to-r | to-w | fence)
 let A-cumul(r) = rfe? ; r
 let cumul-fence = A-cumul(strong-fence | po-rel) | wmb
 let prop = (overwrite & ext)? ; cumul-fence* ; rfe?
+let prop-irrefl = prop \ id
 
 (*
  * Happens Before: Ordering from the passage of time.
  * No fences needed here for prop because relation confined to one process.
  *)
-let hb = ppo | rfe | ((prop \ id) & int)
+let prop-local = prop-irrefl & int
+let hb = ppo | rfe | prop-local
 acyclic hb as happens-before
 
 (****************************************)

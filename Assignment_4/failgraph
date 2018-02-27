@@ -7,7 +7,16 @@ BNAME=$(basename "$LITMUS")
 NAME="${BNAME%.litmus}"
 DOT="${NAME}.dot"
 PDF="${NAME}.pdf"
+PDOT="dot/$DOT"
+PPDF="pdf/$PDF"
 
-herd7 -conf linux-kernel.cfg -show prop -through all -o dot "$LITMUS"
+mkdir -p dot pdf
+rm -f "$PDOT"
+herd7 -conf linux-kernel.cfg -skipchecks happens-before,propagation,coherence,rcu -o dot "$LITMUS"
 #herd7 -conf linux-kernel.cfg -show prop -skipcheck happens-before -o dot "$LITMUS"
-dot -Tpdf "dot/$DOT" -o "pdf/$PDF"
+if [ -s "$PDOT" ]; then
+  dot -Tpdf "$PDOT" -o "$PPDF"
+  echo "generated $PPDF"
+else
+  echo "graph generation failed"
+fi
