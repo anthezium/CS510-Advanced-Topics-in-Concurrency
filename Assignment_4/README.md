@@ -638,7 +638,7 @@ Take a look at the graph, and answer the following:
        the line starting with `doshow`.  A `prop-local` edge  exists when a chain of 
        one or more `prop-irrefl` edges (which can span CPUs) ends up linking two
        events on the same CPU.  Every `prop-local` edge is also a `hb` edge,
-       so we can use the acylicity of happens before to maintain consistency
+       so we can use the acyclicity of happens before to maintain consistency
        with a variable's coherence order as the variable takes on new values 
        concurrently with local accesses to it.
        ([Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt)
@@ -653,7 +653,7 @@ If the graphs get overwhelming to look at, turning off edges you aren't
 interested in in `linux-kernel.cfg`.  Similarly, if there are edges in the model
 that you'd like to see, turn them on.
 
-#### Two variables, one writer, two readers: `MP+wx-wy+ry-rx+ry-rx1`
+#### Two variables, one writer, two readers: `MP+wx-wy+rx-ry+ry-rx1`
 
 Let's add an observer and go back to the drawing board.  Since one observer can
 see the writes happen in either order, it stands to reason that this will also
@@ -663,17 +663,17 @@ saw that when the writes are to the same variable, observers always agree.
 What about when they're to different variables?  Let's set up a program to test
 this, and see if we can get observers to disagree.
 
-Check out `litmus-tests/MP+wx-wy+ry-rx+ry-rx1.litmus`:
+Check out `litmus-tests/MP+wx-wy+rx-ry+ry-rx1.litmus`:
 
 ```
-C MP+wx-wy+ry-rmb-rx+ry-rmb-rx1
+C MP+wx-wy+rx-ry+ry-rx1
 
 {}
 
 P0(int *x, int *y)
 {
-	WRITE_ONCE(*x, 1);
 	WRITE_ONCE(*y, 1);
+	WRITE_ONCE(*x, 1);
 }
 
 P1(int *x, int *y)
@@ -681,8 +681,9 @@ P1(int *x, int *y)
 	int r0;
 	int r1;
 
-	r0 = READ_ONCE(*y);
-	r1 = READ_ONCE(*x);
+	r0 = READ_ONCE(*x);
+  smp_rmb();
+	r1 = READ_ONCE(*y);
 }
 
 P2(int *x, int *y)
@@ -691,53 +692,54 @@ P2(int *x, int *y)
 	int r3;
 
 	r2 = READ_ONCE(*y);
+  smp_rmb();
 	r3 = READ_ONCE(*x);
 }
 
-exists (1:r0=1 /\ 1:r1=0 /\ 2:r2=0 /\ 2:r3=1)
+exists (1:r0=1 /\ 1:r1=0 /\ 2:r2=1 /\ 2:r3=0)
 ```
 
-Here we're checking whether `P1` can observe the write to `y` first, while `P2`
-observes the write to `x` first.  Let's run the check, and if it passes generate a graph:
+Here we're checking whether `P1` can observe the write to `x` first, while `P2`
+observes the write to `y` first.  Note the `smb_rmb()`s between the reads,
+which guarantee that they aren't reordered locally.  This means that if `P1`
+and `P2` disagree on the order of writes to `x` and `y`, it's because the
+writes themselves aren't in an order that observers have to agree on.  Let's
+run the check, and if it passes generate a graph:
 
 ```bash
-./graph litmus-tests/MP+wx-wy+ry-rx+ry-rx1.litmus
+./graph litmus-tests/MP+wx-wy+rx-ry+ry-rx1.litmus
 ```
 
-Unsurprisingly, this case does in fact occur, and a graph illustrating its
-corresponding wiring is generated.  There are a couple of related things to
-note in the graph.  One is that we have another benign cycle, that is once
-again allowed because it depends on program order edges that are not preserved,
-since they're connecting accesses to independent variables and there aren't
-barriers guaranteeing that they are preserved.   Another is that `rf` and `fr`
-edges connect `P0`'s writes to `P1`'s reads in basically the opposite way that
-they connect `P0`'s writes to `P2`'s reads, and that this is what creates the
-benign cycle we just noted.
+This case does occur, and a graph illustrating its corresponding wiring is
+generated.  In other words, the memory model allows `P1` and `P2` to disagree
+about the order of writes to `x` and `y`!
 
-Again, let's fix this.  Use barriers (more or less as before), to guarantee
-that both threads see the write to `x` happen first.  Use this postcondition
-to check your work:
+There are a couple of related things to note in the graph.  One is that we have
+another benign cycle, that is once again allowed because neither the from reads
+(`fr`) edges nor program order (`po`) edges are happens before (`hb`) edges.
+Another is that `rf` and `fr` edges connect `P0`'s writes to `P1`'s reads in
+basically the opposite way that they connect `P0`'s writes to `P2`'s reads, and
+that this is what creates the benign cycle we just noted.
 
-```
-~exists ((1:r0=1 /\ 1:r1=0) \/ (2:r2=1 /\ 2:r3=0))
-```
-
-This postcondition guarantees that neither thread observes `y` at 1 and `x` at
-0.  If neither thread observes the writes out of order, it follows that both
-threads observe the writes in the same order.  Write the new test to
-`litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus` and check it:
+Again, let's "fix" this.  Use barriers (more or less as before), to guarantee
+that both threads see the write to `x` happen first.  Write this new test to
+`litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus`.  Now the postcondition should
+fail:
 
 ```bash
-./check litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus
+./check litmus-tests/MP+wx-wy+rx-ry+ry-rx2.litmus
+```
+
+Now, generate a graph of a wiring that satisfies the postcondition but is ruled
+out by the memory model:
+
+```bash
+./failgraph litmus-tests/MP+wx-wy+rx-ry+ry-rx2.litmus
 ```
 
 ##### Questions
-9.  What barriers did you have to add, and where?
-10. Use the original postcondition 
-    `exists (1:r0=1 /\ 1:r1=0 /\ 2:r2=0 /\ 2:r3=1)` 
-    and `failgraph` to inspect a case ruled out by the memory model
-    where `P1` sees the write to `y` but misses the write to `x`.  Where is the
-    cycle?  Why does the memory model rule it out?
+9.  What barrier(s) did you have to add, and where?
+10. Where is the cycle?  Why does the memory model rule it out?
 
 ##### Which check failed?
 
@@ -769,7 +771,7 @@ herd7 -conf linux-kernel.cfg -skipcheck happens-before -strictskip true litmus-t
 Note that this doesn't work for some of the coherence order failures we saw
 early in this assigment.
 
-#### Two variables, two writers, two readers: `IRIW+wx+wy+ry-rx+ry-rx1`
+#### Two variables, two writers, two readers: `IRIWish+rx-ry+wx+wy+ry-rx1`
 
 Now, let's separate the writes to `x` and `y` into separate threads, and see
 what it takes to create an ordering between them.  First, we once again confirm
@@ -777,7 +779,7 @@ that the observers (`P0` and `P3` this time around) can disagree on the order
 of writes:
 
 ```
-C IRIW+ry-rx+wx+wy+ry-rx1
+C IRIWish+rx-ry+wx+wy+ry-rx1
 
 {}
 
@@ -786,8 +788,9 @@ P0(int *x, int *y)
 	int r0;
 	int r1;
 
-	r0 = READ_ONCE(*y);
-	r1 = READ_ONCE(*x);
+	r0 = READ_ONCE(*x);
+  smp_rmb();
+	r1 = READ_ONCE(*y);
 }
 
 P1(int *x)
@@ -806,20 +809,19 @@ P3(int *x, int *y)
 	int r3;
 
 	r2 = READ_ONCE(*y);
+  smp_rmb();
 	r3 = READ_ONCE(*x);
 }
 
-exists (0:r0=0 /\ 0:r1=1 /\ 3:r2=1 /\ 3:r3=0)
+exists (0:r0=1 /\ 0:r1=0 /\ 3:r2=1 /\ 3:r3=0)
 ```
 
 ```bash
-./graph litmus-tests/IRIW+ry-rx+wx+wy+ry-rx1.litmus
+./graph litmus-tests/IRIWish+rx-ry+wx+wy+ry-rx1.litmus
 ```
 
 Unsurprisingly, the postcondition holds.  Check out the graph, noting a similar
-benign cycle to those we've seen before.  Add read barriers and generate a new
-graph, just to illustrate that there doesn't even need to be a cycle (benign or
-otherwise) to create this outcome. 
+benign cycle to those we've seen before.  
 
 Next, let's try and recreate the situation we had in the last example, where
 everyone agrees that the write to `x` happens before the write to `y`.  We
@@ -834,16 +836,16 @@ them.
 
 One thing we can do that seems like it might work is to make `P2` read `x`, and
 write whatever value it observes `x` having to `y`.  In other words, we're
-creating a data dependency from `P2`'s read of `x` to its write to `y`.  Copy
+creating a `data` dependency from `P2`'s read of `x` to its write to `y`.  Copy
 the value read from `x` into a register (which you'll need to declare), then
 store that to `y` (instead of 1).  If `P2` sees the write to `x`, then *surely*
 that write is visible to other threads, too.  You'll need to add another
 parameter `int *x` to `P2`'s signature.  Write this new test to
-`litmus-tests/IRIW+ry-rx+wx+wy+ry-rx2.litmus`.  Let's check that this creates
+`litmus-tests/IRIWish+rx-ry+wx+wy+ry-rx2.litmus`.  Let's check that this creates
 an ordering between the updates to `x` and `y`:
 
 ```bash
-./check litmus-tests/IRIW+ry-rx+wx+wy+ry-rx2.litmus
+./check litmus-tests/IRIWish+rx-ry+wx+wy+ry-rx2.litmus
 ```
 
 Wait, what?  We know that `P2` observed `P1`'s write to `x` because `P3`
@@ -860,7 +862,7 @@ showevents mem
 Generate the graph to see this madness in action:
 
 ```bash
-./graph litmus-tests/IRIW+ry-rx+wx+wy+ry-rx2.litmus
+./failgraph litmus-tests/IRIWish+rx-ry+wx+wy+ry-rx2.litmus
 ```
 
 Well, at least the `data` dependency is there.  Trace the `hb` edges, and note
@@ -892,18 +894,18 @@ are more detailed definitions of *A-* and *B-cumulativity* in
 In that section, Stern points out that `smb_store_release()` *is* A-cumulative.
 Modify `P2` to use this for its store (the first parameter is a pointer, not an
 int lvalue as in `WRITE_ONCE()`, the second parameter is the value to store).
-Write this version to `litmus-tests/IRIW+ry-rx+wx+wy+ry-rx3.litmus`.
+Write this version to `litmus-tests/IRIWish+rx-ry+wx+wy+ry-rx3.litmus`.
 
 Confirm that we can no longer observe the writes out of order:
 
 ```bash
-./check litmus-tests/IRIW+ry-rx+wx+wy+ry-rx3.litmus
+./check litmus-tests/IRIWish+rx-ry+wx+wy+ry-rx3.litmus
 ```
 
 Next, generate a graph for an invalid wiring that satisfies the condition:
 
 ```bash
-./failgraph litmus-tests/IRIW+ry-rx+wx+wy+ry-rx3.litmus
+./failgraph litmus-tests/IRIWish+rx-ry+wx+wy+ry-rx3.litmus
 ```
 
 ##### Questions

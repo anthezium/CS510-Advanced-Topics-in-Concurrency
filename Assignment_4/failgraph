@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 LITMUS="$1"
 BNAME=$(basename "$LITMUS")
 NAME="${BNAME%.litmus}"
@@ -13,7 +11,6 @@ PPDF="pdf/$PDF"
 mkdir -p dot pdf
 rm -f "$PDOT"
 herd7 -conf linux-kernel.cfg -skipchecks happens-before,propagation,coherence,rcu -o dot "$LITMUS"
-#herd7 -conf linux-kernel.cfg -show prop -skipcheck happens-before -o dot "$LITMUS"
 if [ -s "$PDOT" ]; then
   dot -Tpdf "$PDOT" -o "$PPDF"
   echo "generated $PPDF"
