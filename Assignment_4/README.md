@@ -184,17 +184,17 @@ C CO+wx-wx+rx-rx1
 
 P0(int *x)
 {
-	WRITE_ONCE(*x, 1);
-	WRITE_ONCE(*x, 2);
+  WRITE_ONCE(*x, 1);
+  WRITE_ONCE(*x, 2);
 }
 
 P1(int *x, int *y)
 {
-	int r0;
-	int r1;
+  int r0;
+  int r1;
 
-	r0 = READ_ONCE(*x);
-	r1 = READ_ONCE(*x);
+  r0 = READ_ONCE(*x);
+  r1 = READ_ONCE(*x);
 }
 
 exists (1:r0=1 /\ 1:r1=2)
@@ -392,30 +392,30 @@ C CO+wx+wx+rx-rx+rx-rx1
 
 P0(int *x)
 {
-	WRITE_ONCE(*x, 1);
+  WRITE_ONCE(*x, 1);
 }
 
 P1(int *x)
 {
-	WRITE_ONCE(*x, 2);
+  WRITE_ONCE(*x, 2);
 }
 
 P2(int *x)
 {
-	int r0;
-	int r1;
+  int r0;
+  int r1;
 
-	r0 = READ_ONCE(*x);
-	r1 = READ_ONCE(*x);
+  r0 = READ_ONCE(*x);
+  r1 = READ_ONCE(*x);
 }
 
 P3(int *x)
 {
-	int r2;
-	int r3;
+  int r2;
+  int r3;
 
-	r2 = READ_ONCE(*x);
-	r3 = READ_ONCE(*x);
+  r2 = READ_ONCE(*x);
+  r3 = READ_ONCE(*x);
 }
 
 exists (2:r0=1 /\ 2:r1=2 /\ 3:r2=1 /\ 3:r3=2)
@@ -495,17 +495,17 @@ C MP+wx-wy+ry-rx1
 
 P0(int *x, int *y)
 {
-	WRITE_ONCE(*x, 1);
-	WRITE_ONCE(*y, 1);
+  WRITE_ONCE(*x, 1);
+  WRITE_ONCE(*y, 1);
 }
 
 P1(int *x, int *y)
 {
-	int r0;
-	int r1;
+  int r0;
+  int r1;
 
-	r0 = READ_ONCE(*y);
-	r1 = READ_ONCE(*x);
+  r0 = READ_ONCE(*y);
+  r1 = READ_ONCE(*x);
 }
 
 exists (1:r0=0 /\ 1:r1=1)
@@ -672,28 +672,28 @@ C MP+wx-wy+rx-ry+ry-rx1
 
 P0(int *x, int *y)
 {
-	WRITE_ONCE(*y, 1);
-	WRITE_ONCE(*x, 1);
+  WRITE_ONCE(*y, 1);
+  WRITE_ONCE(*x, 1);
 }
 
 P1(int *x, int *y)
 {
-	int r0;
-	int r1;
+  int r0;
+  int r1;
 
-	r0 = READ_ONCE(*x);
+  r0 = READ_ONCE(*x);
   smp_rmb();
-	r1 = READ_ONCE(*y);
+  r1 = READ_ONCE(*y);
 }
 
 P2(int *x, int *y)
 {
-	int r2;
-	int r3;
+  int r2;
+  int r3;
 
-	r2 = READ_ONCE(*y);
+  r2 = READ_ONCE(*y);
   smp_rmb();
-	r3 = READ_ONCE(*x);
+  r3 = READ_ONCE(*x);
 }
 
 exists (1:r0=1 /\ 1:r1=0 /\ 2:r2=1 /\ 2:r3=0)
@@ -785,32 +785,32 @@ C IRIWish+rx-ry+wx+wy+ry-rx1
 
 P0(int *x, int *y)
 {
-	int r0;
-	int r1;
+  int r0;
+  int r1;
 
-	r0 = READ_ONCE(*x);
+  r0 = READ_ONCE(*x);
   smp_rmb();
-	r1 = READ_ONCE(*y);
+  r1 = READ_ONCE(*y);
 }
 
 P1(int *x)
 {
-	WRITE_ONCE(*x, 1);
+  WRITE_ONCE(*x, 1);
 }
 
 P2(int *y)
 {
-	WRITE_ONCE(*y, 1);
+  WRITE_ONCE(*y, 1);
 }
 
 P3(int *x, int *y)
 {
-	int r2;
-	int r3;
+  int r2;
+  int r3;
 
-	r2 = READ_ONCE(*y);
+  r2 = READ_ONCE(*y);
   smp_rmb();
-	r3 = READ_ONCE(*x);
+  r3 = READ_ONCE(*x);
 }
 
 exists (0:r0=1 /\ 0:r1=0 /\ 3:r2=1 /\ 3:r3=0)
