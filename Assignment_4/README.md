@@ -609,7 +609,7 @@ that guarantee that the CPU will observe them in that order?
 
 ##### Why are other wirings ruled out?
 
-Change the postcondition back to the first one we checked (where the write to
+Change the postcondition back to the second one we checked (where the write to
 `y` is observed first) and 
 
 ```
