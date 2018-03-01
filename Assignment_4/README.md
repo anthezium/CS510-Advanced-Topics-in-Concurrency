@@ -166,6 +166,9 @@ make install
 export PATH="$HOME/bin:$PATH"
 ```
 
+I've included some scripts in the `Assignment_4` directory that supply various parameters
+to herd to make it do different things: `./check`, `./graph`, and `./failgraph`.
+
 ## Exploring Litmus Tests
 
 ### Coherence Order
