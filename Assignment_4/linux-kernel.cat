@@ -18,7 +18,8 @@
  * It can be replaced by include "cos.cat" for tests that do not use locks.
  *)
 
-include "lock.cat"
+(* include "lock.cat" *)
+include "cos.cat"
 
 (*******************)
 (* Basic relations *)
@@ -47,7 +48,8 @@ let rfi-rel-acq = [Release] ; rfi ; [Acquire]
 
 (* Sequential Consistency Per Variable *)
 let com = rf | co | fr
-acyclic po-loc | com as coherence
+let cb = po-loc | com
+acyclic cb as coherence
 
 (* Atomic Read-Modify-Write *)
 empty rmw & (fre ; coe) as atomic

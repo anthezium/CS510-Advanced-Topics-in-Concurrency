@@ -1,6 +1,6 @@
 # Assignment 4: The Linux-Kernel Memory Model
 
-**Due Date: 4:19pm on Thursday, March 4th**
+**Due Date: 4:19pm on Thursday, March 8th**
 
 ## Overview
 
@@ -103,7 +103,8 @@ For the Linux-Kernel Memory Model (see `linux-kernel.cat`):
    relations `po-loc` (accesses on a variable within a single thread), `rf` (edges
    from a write to a read that observes the value written), `co` (total order on
    writes to the variable), and `fr` (edges from a read to a write that read
-   missed).  In the model, this check is called `coherence`.
+   missed).  I've labeled this union `cb`.  In the model, this check is called
+   `coherence`.
 *  herd rejects wirings where atomic read-modify-write instructions observably
    don't execute atomically, (e.g. for a compare and swap, the variable takes
    on a new value in its coherence order in between the value we compared against
@@ -317,7 +318,21 @@ Time CO+wx-wx+rx-rx2 0.01
 Hash=4245322cd6d4c0585c466fa11d18657c
 ```
 
-Note `No` and `Never` in the output to confirm this.
+Note `No` and `Never` in the output to confirm this.  Use the failgraph tool to
+take a look at a graph that satisfies the postcondition, and note our first
+problematic cycle:
+
+```bash
+./failgraph litmus-tests/CO+wx-wx+rx-rx2.litmus
+```
+
+This cycle is in `cb`, indicating that coherence has been violated.  We can see
+the cycle, an `rf` edge from `b` (`P0`'s second write to `x`) to `c` (`P1`'s
+first read of `x`, which we have required to observe the second write in the
+postcondition), then a `po-loc` edge from `c` to `d` (`P1`'s second read of
+`x`, which we have required to observe the first write in the postcondition,
+finishing our knot in the coherence order), and finally a `fr` edge from `d`
+back to `b`, since this read missed the write of 2 to `x`.
 
 #### One variable, two writers, one reader: `CO+wx+wx+rx-rx`
 
@@ -485,6 +500,23 @@ both perspectives are consistent with `x` having taken on `0`, `2`, and then
 both perspectives are consistent with `x` having taken on `0`, `1`, `2`, and
 (alternatively) with `x` having taken on `0`, `2`, `1`.
 
+Find the `cb` cycle in the resulting graph:
+
+```bash
+./failgraph litmus-tests/CO+wx+wx+rx-rx+rx-rx2.litmus
+```
+
+Once again, the cycle includes the write that updates `x` to 2, `P2`'s read that
+observes it at 2, and `P2`'s po-later read that observes it at 1, violating the
+coherence order for `x` the `P1` observed in `c` and `d`.
+
+##### Keeping things readable
+
+If the graphs get overwhelming to look at, turn off edges you aren't interested
+in in the `doshow` line in `linux-kernel.cfg`.  Similarly, if there are edges
+in the model that you'd like to see, turn them on.  At this point, we're done
+looking at coherence violations, so you can safely turn off the `cb` edges.
+
 #### Two variables, one writer, one reader: `MP+wx-wy+ry-rx1`
 
 First, let's show that when we have one thread writing to two
@@ -649,12 +681,6 @@ Take a look at the graph, and answer the following:
        HAPPENS-BEFORE RELATION` section).  
        Looking at the new graph, why does `d` happen before `c`?  
     3. Why does `c` happen before `d`?
-
-##### Keeping things readable
-
-If the graphs get overwhelming to look at, turning off edges you aren't
-interested in in `linux-kernel.cfg`.  Similarly, if there are edges in the model
-that you'd like to see, turn them on.
 
 #### Two variables, one writer, two readers: `MP+wx-wy+rx-ry+ry-rx1`
 
