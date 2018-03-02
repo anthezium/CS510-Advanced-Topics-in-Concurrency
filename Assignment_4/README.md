@@ -319,8 +319,8 @@ Hash=4245322cd6d4c0585c466fa11d18657c
 ```
 
 Note `No` and `Never` in the output to confirm this.  Use the failgraph tool to
-take a look at a graph that satisfies the postcondition, and note our first
-problematic cycle:
+take a look at a graph that satisfies the postcondition but is rejected by the
+model (hence the `No` result above), and note our first problematic cycle:
 
 ```bash
 ./failgraph litmus-tests/CO+wx-wx+rx-rx2.litmus
