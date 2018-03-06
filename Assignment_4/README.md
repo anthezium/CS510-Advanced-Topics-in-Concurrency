@@ -691,10 +691,10 @@ saw that when the writes are to the same variable, observers always agree.
 What about when they're to different variables?  Let's set up a program to test
 this, and see if we can get observers to disagree.
 
-Check out `litmus-tests/MP+wx-wy+rx-ry+ry-rx1.litmus`:
+Check out `litmus-tests/MP+wy-wx+rx-ry+ry-rx1.litmus`:
 
 ```
-C MP+wx-wy+rx-ry+ry-rx1
+C MP+wy-wx+rx-ry+ry-rx1
 
 {}
 
@@ -735,7 +735,7 @@ writes themselves aren't in an order that observers have to agree on.  Let's
 run the check, and if it passes generate a graph:
 
 ```bash
-./graph litmus-tests/MP+wx-wy+rx-ry+ry-rx1.litmus
+./graph litmus-tests/MP+wy-wx+rx-ry+ry-rx1.litmus
 ```
 
 This case does occur, and a graph illustrating its corresponding wiring is
@@ -751,7 +751,7 @@ that this is what creates the benign cycle we just noted.
 
 Again, let's "fix" this.  Use barriers (more or less as before), to guarantee
 that both threads see the write to `x` happen first.  Write this new test to
-`litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus`.  Now the postcondition should
+`litmus-tests/MP+wy-wx+ry-rx+ry-rx2.litmus`.  Now the postcondition should
 fail:
 
 ```bash
@@ -780,20 +780,20 @@ one-by-one until it stops failing.  For example, to skip the memory model's
 `happens-before` check on a litmus test, you can use the following incantation:
 
 ```bash
-herd7 -conf linux-kernel.cfg -skipcheck happens-before litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus 
+herd7 -conf linux-kernel.cfg -skipcheck happens-before litmus-tests/MP+wy-wx+ry-rx+ry-rx2.litmus 
 ```
 
 You can disable multiple checks as follows:
 
 ```bash
-herd7 -conf linux-kernel.cfg -skipchecks happens-before,propagation,coherence,rcu litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus
+herd7 -conf linux-kernel.cfg -skipchecks happens-before,propagation,coherence,rcu litmus-tests/MP+wy-wx+ry-rx+ry-rx2.litmus
 ```
 
 If you'd like to guarantee that exactly the specified check(s) fail (and all
 others pass), set the `strictskip` flag.  So, to check whether *only* happens-before fails:
 
 ```bash
-herd7 -conf linux-kernel.cfg -skipcheck happens-before -strictskip true litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus 
+herd7 -conf linux-kernel.cfg -skipcheck happens-before -strictskip true litmus-tests/MP+wy-wx+ry-rx+ry-rx2.litmus 
 ```
 
 #### Two variables, two writers, two readers: `IRIWish+rx-ry+wx+wy+ry-rx1`
