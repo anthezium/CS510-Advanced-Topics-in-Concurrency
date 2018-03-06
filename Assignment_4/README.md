@@ -447,14 +447,14 @@ We might as well do the checking and graphing in one fell swoop:
 
 Note that we get an `Ok`, so at the very least, there is some valid wiring
 where threads agree on the sequence of values `x` takes on.  Check out the
-pretty symmetric graph this generates (a fortune cookie?), with red `rf` edges
-from the first write to both first reads, and from the second write to both
-second reads.  This example feels like the platonic ideal of agreement with the
-coherence order: everything lines up nicely and all threads see the same thing.
-If you'd like to acquaint yourself with other, less pastoral examples where the
-readers still agree with the coherence order, pick a state enumerated in herd's
-output (or imagine one you would like to see) and change the postcondition in
-the litmus test, then re-run `./graph` and see what you have wrought.
+graph this generates, with red `rf` edges from the first write to both first
+reads, and from the second write to both second reads.  This example feels like
+the platonic ideal of agreement with the coherence order: everything lines up
+nicely and all threads see the same thing.  If you'd like to acquaint yourself
+with other examples where the readers still agree with the coherence order,
+pick a state enumerated in herd's output (or imagine one you would like to see)
+and change the postcondition in the litmus test, then re-run `./graph` and see
+what you have wrought.
 
 We may have some pretty strong intution at this point that reads agree with the
 coherence order, but let's see if we can find a case where they don't.  Really,
@@ -564,7 +564,7 @@ exists (1:r0=1 /\ 1:r1=0)
 ```
 
 This also corresponds to a valid wiring.  Take a look at the graph
-(`pdf/MP+wx-wy+ry-rx2.pdf`) to note our first benign cycle.  Note that the
+(`pdf/MP+wx-wy+ry-rx2.pdf`) to note a benign cycle.  Note that the
 cycle includes `po` (program) edges between reads, while the `hb` relation in
 `linux-kernel.cat` (which the model requires to be acyclic) only includes `ppo`
 (preserved program order) edges.  Review the `THE PRESERVED PROGRAM ORDER RELATION` section
@@ -598,7 +598,7 @@ first write establishes a message payload, and the second write shares that
 payload with observers.  Because the writes are related at this semantic level,
 it makes sense for us to guarantee that they are only observed in an order that
 fulfills the semantics we need.  We can make this happen, we just need to
-include some explicit guidance, so the machine knows that it's what we want.
+include some explicit guidance, so the machine knows what we want.
 
 Recall a couple of definitions from 
 [Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt):
@@ -649,10 +649,9 @@ exists (1:r0=1 /\ 1:r1=0)
 ```
 
 but keep the barriers as they are.  Save this version of the file as
-`litmus-tests/MP+wx-wy+ry-rx3.litmus`.  Now, we can use the `failgraph` script,
-which (in some situations) generates a graph for a wiring that fails the
-postcondition.  It works in this case, and generates our first graph with a
-cycle that isn't allowed by the memory model.  
+`litmus-tests/MP+wx-wy+ry-rx3.litmus`.  Now, we can use the `failgraph` script
+to show us another cycle, in a graph that satisfies this new postcondition but
+isn't allowed by the memory model.  
 
 ```bash
 ./failgraph litmus-tests/MP+wx-wy+ry-rx3.litmus
@@ -796,9 +795,6 @@ others pass), set the `strictskip` flag.  So, to check whether *only* happens-be
 ```bash
 herd7 -conf linux-kernel.cfg -skipcheck happens-before -strictskip true litmus-tests/MP+wx-wy+ry-rx+ry-rx2.litmus 
 ```
-
-Note that this doesn't work for some of the coherence order failures we saw
-early in this assigment.
 
 #### Two variables, two writers, two readers: `IRIWish+rx-ry+wx+wy+ry-rx1`
 
