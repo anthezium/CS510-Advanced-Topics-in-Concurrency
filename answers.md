@@ -541,4 +541,138 @@ the request and transitioning its copy of `owner` to shared mode.
    point to it, so the attempt to dereference it would result in a segmentation
    fault.
 
-Copyright Ted Cooper, February 2018
+`Assignment_4`:
+1.  **Are the `po` edges we see in the graph in `ppo`?  Why or why not?**
+
+    It is not in `ppo`, because there is not fence between the loads, nor is
+    there any kind of dependency.
+
+2.  **From an operational perspective, your answer to 1 amounts to a statement
+    about whether adjacent loads of different variables can be reordered in
+    this memory model.  What is that statement?**
+
+    The statement is that adjacent loads of different variables can be reordered
+    in this memory model.
+
+3.  **Is your answer to 2 true for all architectures supported by the memory
+    model?  If not, give an example of a supported architecture where it is
+    true, and a supported architecture where it is false.**
+
+    No, it is only true for a subset of supported architectures.  For example,
+    it is true for `ARMv7` and `POWER`, false for `x86_64`.
+
+4.  **What barrier(s) did you have to add (and where) to make this work?**
+
+    An `smp_wmb()` between the writes, and an `smb_rmb()` between the reads.
+  
+5.  **For each barrier you added, explain why it was necessary to do so, and
+    what would happen if you hadn't.**
+
+    If we just add `smp_wmb()` between the writes, there is nothing to prevent the
+    loads from being reordered.  Similarly, if we just add `smp_rmb()` between the
+    reads, there is nothing to prevent the writes from being reordered.
+
+6.  **If two writes to different variables propagate to a CPU in some order, does
+    that guarantee that the CPU will observe them in that order?**
+
+    No, the CPU can still reorder its loads to make observations that violate
+    propagation order.
+
+7.  **We see a series of edges in this graph where you have two accesses
+    separated in program order by a barrier.  Are these accesses in `ppo`?  Why
+    or why not?**
+
+    Yes.  In one case, we have a write to `x`, then `smp_wmb()`, then a write to
+    `y`.  This matches the second rule from the `THE PRESERVED PROGRAM ORDER
+    RELATION` section in 
+    [Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt).
+    In the other two cases, we have a read of `y`, then `smp_wmb()`, then a read of
+    `x`.  This matches the third rule in that section.
+
+8.  **It's clear that there's a happens before cycle between `P1`'s reads, but
+    it may not be obvious why it's there.  Let's track it down:**
+    1. **Consider the `fr` edge from `P1`'s read of `x` at 0 to `P0`'s write to
+       `x` of 1.  Has the write propagated to `P1` when the read observes `x`?**
+
+       No.  If it had, the read would have observed 1, not 0.
+
+    2. **Tell herd to show us edges in the `prop-irrefl` and `prop-local`
+       relations by editing `linux-kernel.cfg` and adding them to the list on
+       the line starting with `doshow`.  A `prop-local` edge  exists when a chain of 
+       one or more `prop-irrefl` edges (which can span CPUs) ends up linking two
+       events on the same CPU.  Every `prop-local` edge is also a `hb` edge,
+       so we can use the acyclicity of happens before to maintain consistency
+       with a variable's coherence order as the variable takes on new values 
+       concurrently with local accesses to it.
+       ([Stern 2017](https://github.com/aparri/memory-model/blob/master/Documentation/explanation.txt)
+       elaborates on this, calling our `prop-local` `prop`, in `THE
+       HAPPENS-BEFORE RELATION` section).  
+       Looking at the new graph, why does `d` happen before `c`?**
+
+       There is a chain of `prop-irrefl` edges that connect the read of `x` at
+       0 (`d`) to the read of `y` at 1 (`c`), yielding a `prop-local` edge
+       which is in turn a `hb` edge.  Refer to `linux-kernel.cat` for the full 
+       definitions of the relations named below:
+        1. The `fr` edge from `d` to `a` is in `prop-irrefl` because a `prop`
+           edge can start with an overwrite of the same variable by another
+           thread: `let prop = (overwrite & ext)? ; cumul-fence* ; rfe?`.
+        2. There is a `wmb` edge from `a` to `b` since they are two writes
+           separated by an `smp_wmb()`: `let wmb = [W] ; fencerel(Wmb) ; [W]`.
+           In turn, `wmb` is in `cumul-fence`, which is in the middle of `prop`
+           (shown above).
+        3. There is an `rfe` (read from a variable written by another thread) edge
+           from `b` to `c`, and `rfe` is at the end of `prop` (shown above).
+
+    3. **Why does `c` happen before `d`?**
+
+    Because there is an `smp_rmb()` between `c` and `d`, they are in `ppo`,
+    and thus in `hb`.
+
+9.  **What barrier(s) did you have to add, and where?**
+
+    Much like in the previous example, we add `smp_wmb()` between the writes
+    (there are already `smp_rmb()` between each pair of reads).
+
+10. **Where is the cycle?  Why does the memory model rule it out?**
+
+    There is an `hb` edge from `d` to `d` because there is a `ppo` edge there,
+    and another `hb` edge from `d` to `c` because there is a chain of
+    `prop-irrefl` edges going `d`, `a`, `b`, `c`.  Thus, there is an `hb` cycle.
+
+11. **Where is the cycle?  What has changed in the graph to make it appear?**
+
+    The cycle is between `f` and `g`.  `f ->ppo g` (and so `f ->hb g`) because
+    they are reads and there is a `smp_rmb()` between them, and `g ->ppo f`
+    because there is a chain of `prop-irrefl` from `g` to `f` via `c`, `d`, and
+    `e`, and `g` and `f` are on the same CPU, so `g ->prop-local f` (and so `g ->hb
+    f`).
+
+12. **BONUS:  There is at least one other way, using the tools Stern introduces,  
+      to make this postcondition fail (without using `smp_store_release()`).  
+      Find one, and explain it.**
+
+    You can use an `smp_mb()` between `P2`'s read and write.  Strong fences
+    (such as `smp_mb()`) are A-cumulative, so this forces the write to `x` to
+    propagate to all CPUs before the write to `y`.  Alternatively, you could have
+    no dependency from `P1` to `P2`, and strong fences in between the pairs of reads.
+
+13. **Broadly, what (beyond program order) does it take:**
+    1. **to order two writes to the same variable by the same CPU?**
+
+    Nothing, coherence orders it for us.
+
+    2. **to order two writes to different variables by the same CPU?**
+
+    We need to make sure that the writes are propagated from the writing CPU
+    in order.  A B-cumulative fence, such as `smp_wmb()` between the writes
+    accomplishes this.  Additionally, we need to make sure that the reading CPUs
+    don't reorder their reads.  `smp_rmb()` gets this job done.
+
+    3. **to order two writes to different variables by different CPUs?**
+
+    We need to make sure that the first CPU's write is fully propagated
+    before the second CPU's write is propagated.  Some form of dependency
+    followed by an A-cumulative fence together ensure this.  Additionally, we need
+    to ensure that readers do not reorder observations, same as above.
+
+Copyright Ted Cooper, March 2018
