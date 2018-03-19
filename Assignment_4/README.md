@@ -916,7 +916,7 @@ are more detailed definitions of *A-* and *B-cumulativity* in
 [Alglave et al 2017 (A Strong Formal Model of Linux-Kernel Memory Ordering
 )](https://www.kernel.org/pub/linux/kernel/people/paulmck/LWNLinuxMM/StrongModel.html).
 
-In that section, Stern points out that `smb_store_release()` *is* A-cumulative.
+In that section, Stern points out that `smp_store_release()` *is* A-cumulative.
 Modify `P2` to use this for its store (the first parameter is a pointer, not an
 int lvalue as in `WRITE_ONCE()`, the second parameter is the value to store).
 Write this version to `litmus-tests/IRIWish+rx-ry+wx+wy+ry-rx3.litmus`.
