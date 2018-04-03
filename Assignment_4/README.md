@@ -167,6 +167,9 @@ make install
 export PATH="$HOME/bin:$PATH"
 ```
 
+For more information on building herd, check out the project's
+[INSTALL.md](https://github.com/herd/herdtools7/blob/master/INSTALL.md).
+
 I've included some scripts in the `Assignment_4` directory that supply various parameters
 to herd to make it do different things: `./check`, `./graph`, and `./failgraph`.
 
