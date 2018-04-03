@@ -154,8 +154,8 @@ You can set up your shell to use it as follows:
 export PATH="/u/theod/bin:$PATH"
 ```
 
-If you have issues getting this to work, or prefer to build your own copy in
-your home directory, you can do it like so:
+If you are not at PSU, have issues getting this to work, or prefer to build
+your own copy in your home directory, you can do it like so:
 
 ```bash
 cd ~/git
@@ -166,6 +166,10 @@ make all
 make install
 export PATH="$HOME/bin:$PATH"
 ```
+
+You may want to include that last `export` line in your `.profile` or `.bashrc`
+if such a line does not already exist.  Otherwise, you'll have to run it in
+every new shell where you want to use herd.
 
 For more information on building herd, check out the project's
 [INSTALL.md](https://github.com/herd/herdtools7/blob/master/INSTALL.md).
