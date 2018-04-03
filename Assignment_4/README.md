@@ -96,7 +96,7 @@ herd enumerates all possible ways of wiring up these relations for a litmus test
 checks whether the postcondition holds for relations that correspond to executions that
 could actually happen under the memory model,
 and throws out possibilities that couldn't happen under the memory model.
-For the Linux-Kernel Memory Model (see `linux-kernel.cat`):
+For the Linux-Kernel Memory Model (see `linux-kernel.cat` for the actual definitions and acylicity checks):
 *  herd rejects wirings that violate sequential consistency per variable.
    These are wirings where there is a cycle in the union of relations that
    represent reads and writes to a particular variable, i.e.  the union of
