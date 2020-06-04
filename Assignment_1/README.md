@@ -406,10 +406,14 @@ previous graphs.
 
 Finally, we offer a chance for intrepid souls to explore combining the
 techniques we've tried above, and anything else you can imagine or read about
-in the realm of spinlock implementation.  How close can you get to `pthread_spin_lock`?
-How is `pthread_spin_lock` [implemented](https://sourceware.org/git/?p=glibc.git;a=blob;f=nptl/pthread_spin_lock.c;h=58c794b5da9aaeac9f0082ea6fdd6d10cabc2622;hb=HEAD) anyway? 
-You may find the `xchgq()` primitive implemented in `util.h` helpful in this exploration.
-Play and trial and error are the substance of experiential learning, so go crazy.
+in the realm of spinlock implementation.  How close can you get to
+`pthread_spin_lock`?  How is `pthread_spin_lock`
+[implemented](https://repo.or.cz/glibc.git/blob/3f0eedddbe260aad3a7b88051d6aa2b205218aa9:/sysdeps/x86_64/nptl/pthread_spin_lock.S)
+anyway?
+([`pthread_spin_unlock`](https://repo.or.cz/glibc.git/blob/3f0eedddbe260aad3a7b88051d6aa2b205218aa9:/sysdeps/x86_64/nptl/pthread_spin_unlock.S)
+You may find additional primitives implemented in `util.h` helpful in this
+exploration.  Play and trial and error are the substance of experiential
+learning, so go crazy.
 
 In keeping with previous steps, implement `spin_experimental_lock()` in `worker.c`,
 and turn on `spin_experimental_lock_correctness_nograph` and `spin_experimental_lock` in
