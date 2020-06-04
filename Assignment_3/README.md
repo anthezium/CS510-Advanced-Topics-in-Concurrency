@@ -246,15 +246,16 @@ ignoring synchronization overhead.
 #### Testing your `coarse_queue` implementation
 
 TODO Fix this, current tests are not sufficient.
-[//]: # We're testing the following properties to determine whether our concurrent
-[//]: # queue implementations are correct:
-[//]: # 1. If a thread enqueues A before B, no thread dequeues B before A (if
-[//]: #    both are dequeued).
-[//]: # 2. No values are dropped, and no values are duplicated.  That is, the total
-[//]: #    number of values enqueued is equal to the total number of values dequeued
-[//]: #    plus the total number of values remaining in the queue at the end of the test.
-[//]: # If either check fails, the test harness terminates with an error condition and
-[//]: # message, as usual. 
+<!-- We're testing the following properties to determine whether our concurrent
+queue implementations are correct:
+1. If a thread enqueues A before B, no thread dequeues B before A (if
+   both are dequeued).
+2. No values are dropped, and no values are duplicated.  That is, the total
+   number of values enqueued is equal to the total number of values dequeued
+   plus the total number of values remaining in the queue at the end of the test.
+If either check fails, the test harness terminates with an error condition and
+message, as usual. 
+-->
 
 `coarse_queue_correctness_nograph` tests your implementation for these
 properties, and should already (and exclusively) be on.
